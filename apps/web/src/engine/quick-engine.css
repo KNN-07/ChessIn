@@ -159,7 +159,10 @@
 }
 .analysis-layout.has-quick-settings {
   width: calc(100% - 44px);
-  margin-right: 44px;
+  /* Center the capped workspace within the area left of the fixed rail. */
+  margin-inline: auto;
+  position: relative;
+  left: -22px;
 }
 @media (min-width: 850px) and (max-width: 1099px) {
   .analysis-layout.has-quick-settings {
@@ -171,7 +174,7 @@
 @media (max-width: 849px) {
   .analysis-layout.has-quick-settings {
     width: calc(100% - 32px);
-    margin-right: 32px;
+    left: -16px;
   }
   .quick-engine-rail {
     width: 32px;
