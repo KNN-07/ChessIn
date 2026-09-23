@@ -6,13 +6,13 @@
 
 <p align="center"><a href="https://chessin.knn07.workers.dev"><strong>Open ChessIn</strong></a> · <a href="https://github.com/KNN-07/ChessIn">Source on GitHub</a> · <a href="https://github.com/KNN-07/ChessIn/issues">Report an issue</a> · <a href="#run-locally">Run locally</a> · <a href="#deploy-the-web-app-to-cloudflare">Deploy</a></p>
 
-![ChessIn desktop analysis of an Italian Game, showing a real Stockfish depth-18 three-line search](docs/screenshot.png)
+![ChessIn's tabbed analysis board with paired move notation, ChessIn quality scores and a real Stockfish depth-18 evaluation](docs/screenshot.png)
 
 ## What you can do
 
-- **Analyze without an account.** Import PGN games with variations and comments, paste a FEN, explore legal moves on the board, inspect engine lines and export your annotated game. Games and reviews are stored in your browser, not synced to an account.
-- **Review with evidence.** See an evaluation graph, move grades, the actual search depth and best continuation. A **Brilliant** move uses an explicitly labeled *engine-backed sacrifice heuristic*, not a claim of perfect chess understanding. Incomplete or bounded comparisons remain **Uncertain**; ChessIn quality is not Chess.com accuracy or an Elo rating.
-- **Play at your pace.** Play casual untimed or timed games against Stockfish, choose a supported strength, and review the finished game. No matchmaking or disguised engine hints during play.
+- **Analyze without an account.** Switch between Moves, Engine and Review beside a responsive board. Paired White/Black notation, persistent navigation, a White-oriented evaluation bar and selected-move feedback keep the position and its evidence together. Import PGN variations/comments, paste FEN and export your annotated game; your library stays in your browser.
+- **Review with evidence.** Compare White/Black **ChessIn quality** cards, classification counts and a selectable evaluation graph. Inspect the actual common depth and best continuation in Overview or Moves. A **Brilliant** move uses an explicitly labeled *engine-backed sacrifice heuristic*, not a claim of perfect chess understanding. Incomplete or bounded comparisons remain **Uncertain**; ChessIn quality is not Chess.com accuracy or an Elo rating.
+- **Play at your pace.** Preview the board, choose your color and time-control cards, and switch between New game, Engine and Rules before starting. Casual games have real clocks, paired notation and a Game details tab; completed games open directly in review. No matchmaking or disguised engine hints during play.
 - **Choose where the engine runs.** Local Stockfish.js is the default; the lite single-thread engine is a separate, explicit ~1.8 MB download. Stronger/full and threaded builds are optional. An operator-run native UCI API can serve a trusted group, but ChessIn never silently sends local analysis to it.
 - **Keep working offline.** After the app shell is controlled and a complete engine pair is installed, local analysis can work offline. Browser storage is fallible: export important PGNs and check the app's honest offline/storage status.
 
@@ -44,6 +44,8 @@ Authenticate Wrangler with your Cloudflare account when prompted. `npm run deplo
 Import multiple standard-chess PGNs with recursive variations, comments and NAGs, or paste a FEN. Imports are transactional, limited to 2 MiB, 100 games, 20,000 nodes and variation depth 32. Other chess variants are rejected; a FEN cannot reconstruct prior repetition history.
 
 Drag a piece, tap source and target, or enter SAN/UCI in the labeled move input. Both pointer methods offer queen, rook, bishop and knight promotion. Arrow keys navigate moves outside form controls. A different continuation creates a variation, which you can promote to the main line. Deleting a branch or game requires confirmation. Flipping the board/bar does not change White-positive score meaning.
+
+The move list keeps the selected move visible without scrolling the whole page. Move-review scores describe the played continuation from its **parent** position; their mate distances begin before that move. They are labeled separately from live position evaluations. Terminal board evaluations follow chess rules, and changing a game tree or engine configuration clears incompatible move evidence.
 
 IndexedDB stores games, preferences and reviews. Saves await transaction completion; simultaneous edits in another tab become separate copies rather than overwriting the other version. If storage is blocked or full, the current board remains in memory and shows **Unsaved** with PGN export. Browser storage is not a backup. PGN export preserves the tree; FEN copy reflects the selected position.
 

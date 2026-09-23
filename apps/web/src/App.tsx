@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faChessBoard, faBookOpen, faChessKnight, faSliders, faCircleInfo, type IconDefinition } from '@fortawesome/free-solid-svg-icons'
 import { createGame, importFen, selectNode, type GameDocument } from '@chessin/core/game'
+import type { ReviewMove } from '@chessin/core/review'
 import { AnalysisPage } from './features/analysis/AnalysisPage'
 import { LibraryPage, downloadPgn } from './features/library/LibraryPage'
 import { EngineSettingsPanel } from './engine/EngineSettingsPanel'
@@ -21,13 +22,14 @@ export function App() {
   const [warning, setWarning] = useState('')
   const [playActive, setPlayActive] = useState(false)
   const [reviewFirst, setReviewFirst] = useState(false)
-  const [grades, setGrades] = useState<Record<string, { label: string }>>({})
+  const [grades, setGrades] = useState<Record<string, ReviewMove>>({})
   const suspendPlay = useRef<(() => Promise<void>) | null>(null)
   const registerSuspend = useCallback((suspend: () => Promise<void>) => { suspendPlay.current = suspend }, [])
   const currentRef = useRef<GameDocument | null>(null)
   const latestRef = useRef<GameDocument | null>(null)
   const savePromise = useRef<Promise<void> | null>(null)
   const engine = useEngine()
+  useEffect(() => { setGrades({}) }, [engine.descriptor, engine.provider, engine.settings])
 
   useEffect(() => {
     let alive = true
@@ -36,6 +38,7 @@ export function App() {
   }, [])
 
   const saveChanges = useCallback((next: GameDocument) => {
+    if (currentRef.current?.id !== next.id || currentRef.current?.nodes !== next.nodes || currentRef.current?.rootFen !== next.rootFen) setGrades({})
     currentRef.current = next
     latestRef.current = next
     setGame(next)

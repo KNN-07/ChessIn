@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { getPosition, reconstruct, type GameDocument } from '@chessin/core/game'
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faArrowRight, faBolt, faBookOpen, faChessBoard, faChessKing, faChessKnight, faChessPawn, faClock, faFileExport, faFlag, faListOl, faPause, faPlay, faRotateRight, faShuffle, faSliders } from '@fortawesome/free-solid-svg-icons'
+import { createGame, getPosition, reconstruct, type GameDocument } from '@chessin/core/game'
 import { exportPgn } from '@chessin/core/pgn'
 import type { EngineDescriptor, EngineSettings, SearchLimit } from '@chessin/core/engine'
 import { AnalysisBoard } from '../../components/AnalysisBoard'
@@ -23,6 +25,16 @@ const presets: Record<Exclude<Preset, 'custom'>, [number | null, number]> = {
   untimed: [null, 0], '3+2': [3, 2], '5+0': [5, 0], '10+0': [10, 0],
 }
 
+const setupTabs = [
+  { id: 'new', label: 'New game', icon: faChessKnight },
+  { id: 'engine', label: 'Engine', icon: faSliders },
+  { id: 'rules', label: 'Rules', icon: faBookOpen },
+] as const
+const gameTabs = [
+  { id: 'moves', label: 'Moves', icon: faListOl },
+  { id: 'details', label: 'Game details', icon: faChessBoard },
+] as const
+
 export function PlayPage({ game, onChange, onReview, onActiveChange, onSuspendReady }: PlayPageProps) {
   const engine = useEngine()
   const [session, setSession] = useState<PlaySession | null>(() => game && readPlayState(game) ? PlaySession.restore(game) : null)
@@ -43,6 +55,10 @@ export function PlayPage({ game, onChange, onReview, onActiveChange, onSuspendRe
   const [elo, setElo] = useState<number | null>(null)
   const [moveText, setMoveText] = useState('')
   const [displayTick, setDisplayTick] = useState(0)
+  const [setupTab, setSetupTab] = useState<(typeof setupTabs)[number]['id']>('new')
+  const [gameTab, setGameTab] = useState<(typeof gameTabs)[number]['id']>('moves')
+  const tabId = useId()
+  const preview = useMemo(() => createGame(), [])
   const saveTail = useRef<Promise<void>>(Promise.resolve())
 
   function persist(): Promise<void> {
@@ -274,46 +290,118 @@ export function PlayPage({ game, onChange, onReview, onActiveChange, onSuspendRe
     while (node.parentId) { nodes.push(node); node = view.nodes[node.parentId] }
     return nodes.reverse()
   }, [view])
+  const skillOption = skillSupported?.type === 'spin' ? skillSupported : null
+  const skillMin = Math.max(0, skillOption?.min ?? 0)
+  const skillMax = Math.min(20, skillOption?.max ?? 20)
+  const selectedMinutes = preset === 'custom' ? minutes : presets[preset][0]
+  const selectedIncrement = preset === 'custom' ? increment : presets[preset][1]
+  const timeSummary = selectedMinutes === null ? 'Untimed' : `${selectedMinutes}+${selectedIncrement}`
+  const strengthSummary = strength === 'full' ? 'Full strength' : strength === 'elo'
+    ? eloSupported?.type === 'check' && eloOption?.type === 'spin' ? `Engine Elo ${elo ?? Number(eloOption.default ?? eloOption.min ?? 0)}` : engine.descriptor ? 'Elo unavailable · choose Full strength' : 'Elo · initialize engine'
+    : skillOption ? `Skill level ${Math.max(skillMin, Math.min(skillMax, skill))}` : engine.descriptor ? 'Skill unavailable · choose Full strength' : 'Skill · initialize engine'
+  const handleTabKey = <T extends string>(event: KeyboardEvent<HTMLButtonElement>, tabs: readonly { id: T }[], index: number, select: (id: T) => void) => {
+    const next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1
+      : event.key === 'ArrowRight' ? (index + 1) % tabs.length
+        : event.key === 'ArrowLeft' ? (index - 1 + tabs.length) % tabs.length : -1
+    if (next < 0) return
+    event.preventDefault()
+    select(tabs[next].id)
+    document.getElementById(`${tabId}-${tabs[next].id}-tab`)?.focus()
+  }
+  const statusTitle = state?.status === 'finished' ? 'Game complete' : state?.status === 'interrupted'
+    ? 'Engine interrupted' : state?.status === 'suspended' ? 'Game suspended' : 'Game in progress'
+  const resultLabel = state?.result === '1-0' ? 'White wins' : state?.result === '0-1' ? 'Black wins'
+    : state?.result === '1/2-1/2' ? 'Draw' : null
+  const previewTop = color === 'black' ? 'white' : 'black'
+  const previewBottom = color === 'black' ? 'black' : 'white'
+  const topSide: Side = state?.humanColor === 'b' ? 'w' : 'b'
   return <main className="play-page">
-    <header className="play-header"><h1>Play the engine</h1><p>Casual chess · local engine by default · no analysis hints while playing</p></header>
-    {!view || !state ? <section className="play-setup" aria-label="New game settings">
-      <h2>New game</h2>
-      <fieldset><legend>Play as</legend>{(['white', 'black', 'random'] as const).map(value => <label key={value}><input type="radio" name="play-color" checked={color === value} onChange={() => setColor(value)} />{value}</label>)}</fieldset>
-      <fieldset><legend>Time control</legend>{(Object.keys(presets).concat('custom') as Preset[]).map(value => <label key={value}><input type="radio" name="play-time" checked={preset === value} onChange={() => setPreset(value)} />{value === 'untimed' ? 'Untimed' : value}</label>)}
-        {preset === 'custom' && <div className="play-custom"><label>Minutes (1–180)<input type="number" min="1" max="180" value={minutes} onChange={event => setMinutes(Number(event.target.value))} /></label><label>Increment seconds (0–60)<input type="number" min="0" max="60" value={increment} onChange={event => setIncrement(Number(event.target.value))} /></label></div>}</fieldset>
-      <fieldset><legend>Engine strength</legend><p>Check/download the engine first to see its actual supported controls.</p>
-        {skillSupported && <label><input type="radio" name="play-strength" checked={strength === 'skill'} onChange={() => setStrength('skill')} />Skill Level <input type="range" aria-label="Skill Level" min="0" max="20" value={skill} onChange={event => setSkill(Number(event.target.value))} /> {skill}</label>}
-        {eloSupported && <label><input type="radio" name="play-strength" checked={strength === 'elo'} onChange={() => setStrength('elo')} />Elo <input type="number" aria-label="Engine Elo" min={eloOption.min} max={eloOption.max} value={elo ?? Number(eloOption.default ?? eloOption.min ?? 0)} onChange={event => setElo(Number(event.target.value))} /></label>}
-        <label><input type="radio" name="play-strength" checked={strength === 'full'} onChange={() => setStrength('full')} />Full strength</label>
-      </fieldset>
-      <p>Automatic draws: threefold repetition and 100 reversible halfmoves. A timeout with insufficient mating material is a draw (material-based casual rule).</p>
-      <button type="button" onClick={() => void start()} disabled={busy}>{busy ? 'Initializing engine…' : 'Start game'}</button>
-      <EngineSettingsPanel />
-    </section> : <div className="play-layout">
-      <section className="play-board"><div className="play-player"><strong>{state.humanColor === 'b' ? 'You' : state.engineName} · Black</strong><time aria-label="Black clock">{clockLabel('b')}</time></div>
+    <header className="play-header"><div className="play-heading-icon" aria-hidden="true"><FontAwesomeIcon icon={faChessKnight} /></div>
+      <div><span className="play-eyebrow">CHESSIN · PLAY</span><h1>Play the engine</h1>
+        <p>Casual chess against your chosen engine. No analysis or hints while the game is active.</p></div>
+    </header>
+    {!view || !state ? <div className="play-layout play-setup-layout">
+      <section className="play-preview" aria-label="Starting position preview">
+        <div className="play-preview-heading"><div><span className="play-eyebrow">YOUR NEXT GAME</span><h2>Ready when you are.</h2></div><span className="play-preview-tag"><FontAwesomeIcon icon={faChessBoard} /> Starting position</span></div>
+        <div className="play-preview-player"><span className={`play-player-piece ${previewTop === 'white' ? 'light' : 'dark'}`} aria-hidden="true">{previewTop === 'white' ? '♔' : '♚'}</span><strong>{previewTop === 'white' ? 'White' : 'Black'}</strong><span className="play-preview-side">{color === 'random' ? 'To be decided' : 'Engine'}</span></div>
+        <div className="play-preview-board"><AnalysisBoard game={preview} orientation={color === 'black' ? 'black' : 'white'} onMove={() => undefined} disabled /></div>
+        <div className="play-preview-player"><span className={`play-player-piece ${previewBottom === 'white' ? 'light' : 'dark'}`} aria-hidden="true">{previewBottom === 'white' ? '♔' : '♚'}</span><strong>{previewBottom === 'white' ? 'White' : 'Black'}</strong><span className="play-preview-side">{color === 'random' ? 'To be decided' : 'You'}</span></div>
+        <p className="play-preview-note">The board is a preview. Pieces can be moved after the engine is ready and the game starts.</p>
+      </section>
+      <section className="play-setup play-panel" aria-label="New game settings">
+        <div className="play-panel-head"><span className="play-eyebrow">SET UP YOUR MATCH</span><h2>New game</h2><p>Choose your side and time control, then start when you’re ready.</p></div>
+        <div className="play-tabs" role="tablist" aria-label="New game sections">
+          {setupTabs.map((tab, index) => <button key={tab.id} id={`${tabId}-${tab.id}-tab`} type="button" role="tab" aria-selected={setupTab === tab.id} aria-controls={`${tabId}-${tab.id}-panel`} tabIndex={setupTab === tab.id ? 0 : -1} onClick={() => setSetupTab(tab.id)} onKeyDown={event => handleTabKey(event, setupTabs, index, setSetupTab)}><FontAwesomeIcon icon={tab.icon} aria-hidden="true" />{tab.label}</button>)}
+        </div>
+        <div className="play-tab-content" id={`${tabId}-new-panel`} role="tabpanel" aria-labelledby={`${tabId}-new-tab`} hidden={setupTab !== 'new'} tabIndex={0}>
+          <fieldset className="play-fieldset"><legend>Play as</legend><div className="play-choice-grid play-color-grid">
+            {(['white', 'black', 'random'] as const).map(value => <label key={value} className="play-choice">
+              <input type="radio" name="play-color" checked={color === value} onChange={() => setColor(value)} />
+              <span className="play-choice-body"><span className="play-choice-icon"><FontAwesomeIcon icon={value === 'random' ? faShuffle : value === 'white' ? faChessKing : faChessPawn} aria-hidden="true" /></span><strong>{value === 'random' ? 'Random' : value === 'white' ? 'White' : 'Black'}</strong><small>{value === 'white' ? 'Move first' : value === 'black' ? 'Move second' : 'Surprise me'}</small></span>
+            </label>)}
+          </div></fieldset>
+          <fieldset className="play-fieldset"><legend>Time control</legend><div className="play-choice-grid play-time-grid">
+            {(Object.keys(presets).concat('custom') as Preset[]).map(value => <label key={value} className="play-choice">
+              <input type="radio" name="play-time" checked={preset === value} onChange={() => setPreset(value)} />
+              <span className="play-choice-body"><FontAwesomeIcon icon={value === 'untimed' ? faChessBoard : faClock} aria-hidden="true" /><strong>{value === 'untimed' ? 'Untimed' : value === 'custom' ? 'Custom' : value}</strong><small>{value === 'untimed' ? 'No clock' : value === 'custom' ? 'Your own pace' : `${presets[value][0]} min · ${presets[value][1]} sec increment`}</small></span>
+            </label>)}
+          </div>
+            {preset === 'custom' && <div className="play-custom"><label>Minutes per side <input type="number" inputMode="numeric" min="1" max="180" value={minutes} onChange={event => setMinutes(Number(event.target.value))} /><small>1–180 minutes</small></label><label>Increment per move <input type="number" inputMode="numeric" min="0" max="60" value={increment} onChange={event => setIncrement(Number(event.target.value))} /><small>0–60 seconds</small></label></div>}
+          </fieldset>
+          <fieldset className="play-fieldset play-strength"><legend>Engine strength</legend><p>Only controls advertised by the selected engine appear after it is initialized.</p>
+            {skillOption && skillMax >= skillMin && <label className="play-strength-option"><input type="radio" name="play-strength" checked={strength === 'skill'} onChange={() => setStrength('skill')} /><span>Skill level</span><output>{Math.max(skillMin, Math.min(skillMax, skill))}</output></label>}
+            {skillOption && skillMax >= skillMin && strength === 'skill' && <label className="play-range"><span>Choose skill level <small>{skillMin}–{skillMax}</small></span><input type="range" aria-label="Skill level" min={skillMin} max={skillMax} value={Math.max(skillMin, Math.min(skillMax, skill))} onChange={event => setSkill(Number(event.target.value))} /></label>}
+            {!engine.descriptor && strength === 'skill' && <p className="play-strength-pending">Skill level {skill} requested. Initialize the engine to confirm this control is available, or choose Full strength.</p>}
+            {engine.descriptor && ((strength === 'skill' && !skillOption) || (strength === 'elo' && (!eloOption || eloSupported?.type !== 'check'))) && <p className="play-strength-pending">This engine does not support the selected strength control. Choose Full strength or another supported option.</p>}
+            {eloSupported?.type === 'check' && eloOption?.type === 'spin' && <label className="play-strength-option"><input type="radio" name="play-strength" checked={strength === 'elo'} onChange={() => setStrength('elo')} /><span>Engine Elo</span><input type="number" aria-label="Engine Elo" min={eloOption.min} max={eloOption.max} value={elo ?? Number(eloOption.default ?? eloOption.min ?? 0)} onChange={event => setElo(Number(event.target.value))} /></label>}
+            <label className="play-strength-option"><input type="radio" name="play-strength" checked={strength === 'full'} onChange={() => setStrength('full')} /><span>Full strength</span><FontAwesomeIcon icon={faBolt} aria-hidden="true" /></label>
+          </fieldset>
+        </div>
+        <div className="play-tab-content" id={`${tabId}-engine-panel`} role="tabpanel" aria-labelledby={`${tabId}-engine-tab`} hidden={setupTab !== 'engine'} tabIndex={0}><EngineSettingsPanel /></div>
+        <div className="play-tab-content play-rules" id={`${tabId}-rules-panel`} role="tabpanel" aria-labelledby={`${tabId}-rules-tab`} hidden={setupTab !== 'rules'} tabIndex={0}>
+          <h3>Casual game rules</h3><p>Standard chess, with the full legal move set. Timed games begin only after the engine is ready.</p>
+          <ul><li>Checkmate, stalemate and insufficient material end the game.</li><li>Threefold repetition and 100 reversible halfmoves are automatic draws.</li><li>On timeout, the result is a draw if the other side has insufficient mating material under the material-based casual rule.</li><li>Suspend to stop both clocks. Resignation ends the game; you can export or review a completed game.</li></ul>
+        </div>
+        <div className="play-start"><div><span className="play-eyebrow">YOUR MATCH</span><strong>{color === 'random' ? 'Random side' : `Play as ${color}`} · {timeSummary}</strong><small>{engine.provider === 'local' ? 'On-device' : 'Remote'} {engine.descriptor?.name ?? 'engine'} · {strengthSummary}</small></div>
+          <button type="button" className="play-primary" onClick={() => void start()} disabled={busy}><FontAwesomeIcon icon={faPlay} aria-hidden="true" />{busy ? 'Initializing engine…' : 'Start game'}<FontAwesomeIcon icon={faArrowRight} aria-hidden="true" /></button>
+        </div>
+      </section>
+    </div> : <div className="play-layout">
+      <section className="play-board" aria-label="Game board"><div className="play-player"><span className="play-player-name"><span className={`play-player-piece ${topSide === 'w' ? 'light' : 'dark'}`} aria-hidden="true">{topSide === 'w' ? '♔' : '♚'}</span><strong>{state.engineName}</strong><small>{topSide === 'w' ? 'White' : 'Black'}</small></span><time aria-label={`${topSide === 'w' ? 'White' : 'Black'} clock`}>{clockLabel(topSide)}</time></div>
         <AnalysisBoard game={view} orientation={state.humanColor === 'w' ? 'white' : 'black'} onMove={humanMove} disabled={!active || sessionRef.current?.turn !== state.humanColor} />
-        <div className="play-player"><strong>{state.humanColor === 'w' ? 'You' : state.engineName} · White</strong><time aria-label="White clock">{clockLabel('w')}</time></div>
+        <div className="play-player"><span className="play-player-name"><span className={`play-player-piece ${state.humanColor === 'w' ? 'light' : 'dark'}`} aria-hidden="true">{state.humanColor === 'w' ? '♔' : '♚'}</span><strong>You</strong><small>{state.humanColor === 'w' ? 'White' : 'Black'}</small></span><time aria-label={`${state.humanColor === 'w' ? 'White' : 'Black'} clock`}>{clockLabel(state.humanColor)}</time></div>
         {active && <form className="play-input" onSubmit={event => { event.preventDefault(); if (moveText.trim()) { humanMove(moveText.trim()); setMoveText('') } }}>
           <label htmlFor="play-move-input">Your move (SAN or coordinates)</label>
           <input id="play-move-input" value={moveText} onChange={event => setMoveText(event.target.value)} disabled={sessionRef.current?.turn !== state.humanColor} placeholder="e4 or e2e4" />
           <button type="submit" disabled={sessionRef.current?.turn !== state.humanColor}>Move</button>
         </form>}</section>
-      <section className="play-panel" aria-label="Game status"><h2>{state.status === 'finished' ? `${state.result ?? '*'} · ${state.reason}` : state.status === 'interrupted' ? 'Engine interrupted' : state.status === 'suspended' ? 'Game suspended' : `Your game · ${state.humanColor === 'w' ? 'White' : 'Black'}`}</h2>
-        <p>{state.provider === 'local' ? 'Local' : 'Remote'} · {state.engineName} {state.engineVersion} · {state.initialMs === null ? 'Untimed' : `${state.initialMs / 60_000}+${state.incrementMs / 1000}`}</p>
-        <p aria-live="polite">{state.turn === 'w' ? 'White' : 'Black'} to move{board?.isCheck() ? ' · Check' : ''}</p>
-        {state.status === 'interrupted' && <p>Both clocks are stopped. Reconnect to the same engine and choose Resume, or abandon. No automatic retry.</p>}
-        {state.status === 'suspended' && <p>Clocks are stopped. Resume explicitly to continue.</p>}
-        <ol className="play-moves">{playedNodes.map((node, index) =>
-          <li key={node.id}>{index % 2 === 0 ? `${Math.floor(index / 2) + 1}. ` : ''}{node.san}</li>)}</ol>
-        <div className="play-actions">{(state.status === 'suspended' || state.status === 'interrupted') && <button type="button" onClick={() => void resume()} disabled={busy}>{busy ? 'Connecting…' : state.status === 'interrupted' ? 'Reconnect and resume' : 'Resume'}</button>}
-          {active && <button type="button" onClick={() => { const current = sessionRef.current; if (current) { engine.controller.cancel('play'); current.suspend(); void persist().catch(() => undefined) } }}>Suspend game</button>}
-          {state.status !== 'finished' && <button type="button" onClick={() => endGame(true)}>Resign</button>}
-          {state.status === 'finished' && <button type="button" onClick={() => { sessionRef.current = null; setSession(null); setView(null); setError('') }}>New game</button>}
-          {state.status !== 'finished' && <button type="button" onClick={() => endGame(false)}>Abandon</button>}
-          {state.status === 'finished' && <button type="button" onClick={() => void openReview()}>Finish and Review</button>}
-          <button type="button" onClick={exportGame}>Export PGN</button></div>
-        <p role="status">{saveStatus === 'unsaved' ? 'Unsaved — export PGN to keep your game' : saveStatus === 'saving' ? 'Saving…' : 'Saved locally'}</p>
-        {(state.status === 'suspended' || state.status === 'interrupted') && <EngineSettingsPanel />}
+      <section className="play-panel play-game-panel" aria-label="Game status">
+        <div className="play-panel-head"><span className="play-eyebrow">{state.provider === 'local' ? 'ON-DEVICE GAME' : 'REMOTE ENGINE GAME'}</span><h2>{statusTitle}</h2><p>{state.engineName} {state.engineVersion} · {state.initialMs === null ? 'Untimed' : `${state.initialMs / 60_000}+${state.incrementMs / 1000}`}</p></div>
+        <div className={`play-status ${state.status}`} aria-live="polite"><span className="play-status-dot" />
+          {state.status === 'finished' ? `${resultLabel ?? state.result ?? 'Game over'} · ${state.reason ?? 'Game finished'}` : state.status === 'interrupted' ? 'Engine interrupted · both clocks stopped' : state.status === 'suspended' ? 'Suspended · both clocks stopped' : `${state.turn === 'w' ? 'White' : 'Black'} to move${board?.isCheck() ? ' · Check' : ''}`}
+        </div>
+        <div className="play-tabs" role="tablist" aria-label="Game sections">
+          {gameTabs.map((tab, index) => <button key={tab.id} id={`${tabId}-${tab.id}-tab`} type="button" role="tab" aria-selected={gameTab === tab.id} aria-controls={`${tabId}-${tab.id}-panel`} tabIndex={gameTab === tab.id ? 0 : -1} onClick={() => setGameTab(tab.id)} onKeyDown={event => handleTabKey(event, gameTabs, index, setGameTab)}><FontAwesomeIcon icon={tab.icon} aria-hidden="true" />{tab.label}</button>)}
+        </div>
+        <div className="play-tab-content" id={`${tabId}-moves-panel`} role="tabpanel" aria-labelledby={`${tabId}-moves-tab`} hidden={gameTab !== 'moves'} tabIndex={0}>
+          <div className="play-move-heading"><strong>Moves</strong><span>{playedNodes.length} {playedNodes.length === 1 ? 'ply' : 'plies'}</span></div>
+          {playedNodes.length ? <ol className="play-moves" aria-label="Played moves">{playedNodes.map((node, index) => index % 2 === 0 ? <li key={node.id}><span className="play-move-number">{Math.floor(index / 2) + 1}.</span><span>{node.san}</span><span>{playedNodes[index + 1]?.san ?? '…'}</span></li> : null)}</ol> : <p className="play-empty-moves">The first move will appear here.</p>}
+        </div>
+        <div className="play-tab-content play-details" id={`${tabId}-details-panel`} role="tabpanel" aria-labelledby={`${tabId}-details-tab`} hidden={gameTab !== 'details'} tabIndex={0}>
+          <dl><div><dt>White</dt><dd>{view.headers.White ?? (state.humanColor === 'w' ? 'You' : state.engineName)} · {clockLabel('w')}</dd></div><div><dt>Black</dt><dd>{view.headers.Black ?? (state.humanColor === 'b' ? 'You' : state.engineName)} · {clockLabel('b')}</dd></div><div><dt>Time control</dt><dd>{state.initialMs === null ? 'Untimed' : `${state.initialMs / 60_000} min + ${state.incrementMs / 1000} sec`}</dd></div><div><dt>Engine</dt><dd>{state.provider === 'local' ? 'On device' : 'Remote'} · {state.engineName} {state.engineVersion}</dd></div><div><dt>Result</dt><dd>{state.status === 'finished' ? `${state.result ?? '*'} · ${state.reason ?? 'Game finished'}` : 'In progress'}</dd></div></dl>
+          {state.status === 'interrupted' && <p>Reconnect to the same engine and choose Resume, or abandon. No automatic retry.</p>}
+          {state.status === 'suspended' && <p>Clocks are stopped. Resume explicitly to continue.</p>}
+          {(state.status === 'suspended' || state.status === 'interrupted') && <EngineSettingsPanel />}
+        </div>
+        <div className="play-actions">
+          {(state.status === 'suspended' || state.status === 'interrupted') && <button type="button" className="play-primary" onClick={() => void resume()} disabled={busy}><FontAwesomeIcon icon={faRotateRight} aria-hidden="true" />{busy ? 'Connecting…' : state.status === 'interrupted' ? 'Reconnect and resume' : 'Resume game'}</button>}
+          {active && <button type="button" onClick={() => { const current = sessionRef.current; if (current) { engine.controller.cancel('play'); current.suspend(); void persist().catch(() => undefined) } }}><FontAwesomeIcon icon={faPause} aria-hidden="true" />Suspend game</button>}
+          {state.status !== 'finished' && <button type="button" className="play-danger" onClick={() => endGame(true)}><FontAwesomeIcon icon={faFlag} aria-hidden="true" />Resign</button>}
+          {state.status !== 'finished' && <button type="button" className="play-danger" onClick={() => endGame(false)}>Abandon</button>}
+          {state.status === 'finished' && <><button type="button" className="play-primary" onClick={() => void openReview()}><FontAwesomeIcon icon={faArrowRight} aria-hidden="true" />Finish and Review</button><button type="button" onClick={() => { sessionRef.current = null; setSession(null); setView(null); setError('') }}>New game</button></>}
+          <button type="button" onClick={exportGame}><FontAwesomeIcon icon={faFileExport} aria-hidden="true" />Export PGN</button>
+        </div>
+        <p className="play-save-status" role="status">{saveStatus === 'unsaved' ? 'Unsaved — export PGN to keep your game' : saveStatus === 'saving' ? 'Saving…' : 'Saved locally'}</p>
       </section>
     </div>}
     {error && <p className="play-error" role="alert">{error}</p>}

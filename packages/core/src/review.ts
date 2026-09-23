@@ -221,7 +221,7 @@ export function classifyMove(input: {
   return result
 }
 
-export function reviewSummary(report: ReviewReport, game: GameDocument) {
+export function reviewSummary(report: Pick<ReviewReport, 'moves'>, game: GameDocument) {
   const mainline = mainlineNodes(game)
   const bySide = { white: { total: 0, graded: 0, quality: null as number | null, counts: {} as Record<string, number> }, black: { total: 0, graded: 0, quality: null as number | null, counts: {} as Record<string, number> } }
   const sums = { white: 0, black: 0 }

@@ -1,6 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faArrowRight, faChartLine, faChessBoard, faCircleCheck, faClockRotateLeft, faPause, faPlay, faTrophy } from '@fortawesome/free-solid-svg-icons'
 import type { GameDocument } from '@chessin/core/game'
 import type { EngineScore } from '@chessin/core/engine'
+import { moveSymbols as symbols } from '../../components/move-quality'
 import { mainlineNodes, matchesReview, reviewSignature, reviewSummary, type ReviewReport, type ReviewMove } from '@chessin/core/review'
 import { useEngine } from '../../engine/EngineContext'
 import { getReview, putReview } from '../../storage/db'
@@ -10,11 +13,17 @@ import './ReviewPanel.css'
 export interface ReviewPanelProps {
   game: GameDocument
   onSelect: (nodeId: string) => void
-  onGrades?: (grades: Record<string, { label: string }>) => void
+  onGrades?: (grades: Record<string, ReviewMove>) => void
 }
 
-const symbols: Record<string, string> = { Brilliant: '!!', Great: '!', Best: '✓', Excellent: '✓', Good: '·', Inaccuracy: '?!', Mistake: '?', Blunder: '??', Forced: '↳', Uncertain: '…' }
 const critical: Record<string, true> = { Brilliant: true, Great: true, Inaccuracy: true, Mistake: true, Blunder: true, Uncertain: true }
+const classifications = ['Brilliant', 'Great', 'Best', 'Excellent', 'Good', 'Inaccuracy', 'Mistake', 'Blunder', 'Forced', 'Uncertain'] as const
+
+function moveName(game: GameDocument, id: string): string {
+  const node = game.nodes[id]
+  const before = game.nodes[node.parentId!].fen.split(' ')
+  return `${before[5]}${before[1] === 'b' ? '…' : '.'} ${node.san}`
+}
 
 function scoreText(score?: EngineScore): string {
   if (!score) return '—'
@@ -24,6 +33,8 @@ function scoreText(score?: EngineScore): string {
 }
 
 export function ReviewPanel({ game, onSelect, onGrades }: ReviewPanelProps) {
+  const tabsId = useId()
+  const [tab, setTab] = useState<'overview' | 'moves'>('overview')
   const engine = useEngine()
   const [depth, setDepth] = useState(16)
   const [timeMs, setTimeMs] = useState(3000)
@@ -73,7 +84,7 @@ export function ReviewPanel({ game, onSelect, onGrades }: ReviewPanelProps) {
   useEffect(() => () => { ++runId.current; abortRef.current?.abort(); abortRef.current = null; engine.controller.setReviewActive(false); void engine.controller.cancel('review') }, [engine.controller])
 
   useEffect(() => {
-    const grades = Object.fromEntries(Object.entries(signature && matchesReview(report ?? undefined, signature) ? report!.moves : {}).map(([id, move]) => [id, { label: move.label }]))
+    const grades = signature && matchesReview(report ?? undefined, signature) ? report!.moves : {}
     const key = JSON.stringify(grades)
     if (gradesKey.current !== key) { gradesKey.current = key; onGrades?.(grades) }
   }, [report, onGrades, signatureKey])
@@ -167,7 +178,7 @@ export function ReviewPanel({ game, onSelect, onGrades }: ReviewPanelProps) {
     const score = current?.moves[id]?.whiteScore
     if (!score) return null
     const cp = score.kind === 'mate' ? Math.sign(score.value || (current?.moves[id]?.side === 'white' ? 1 : -1)) * 1000 : score.value
-    return { id, x: 20 + index * (560 / Math.max(1, nodeIds.length - 1)), y: 80 - 61 * Math.tanh(cp / 380), label: `${index + 1}. ${game.nodes[id].san}: ${scoreText(score)} White perspective` }
+    return { id, x: 20 + index * (560 / Math.max(1, nodeIds.length - 1)), y: 80 - 61 * Math.tanh(cp / 380), label: `${moveName(game, id)}: ${scoreText(score)} from White’s perspective` }
   })
   const paths: string[] = []
   let path = ''
@@ -176,19 +187,51 @@ export function ReviewPanel({ game, onSelect, onGrades }: ReviewPanelProps) {
     path += `${path ? ' L' : 'M'}${point.x.toFixed(1)},${point.y.toFixed(1)}`
   }
   if (path) paths.push(path)
+  const actualDepths = nodeIds.map(id => current?.moves[id]?.actualDepth ?? 0).filter(value => value > 0)
+  const depthRange = actualDepths.length ? `${Math.min(...actualDepths)}${Math.min(...actualDepths) === Math.max(...actualDepths) ? '' : `–${Math.max(...actualDepths)}`}` : '—'
+  const isComplete = current?.status === 'completed'
+  const selectedEvidence = activeMove ? <article className={`review-evidence review-${activeMove.label.toLowerCase()}`} aria-label={`Review of ${moveName(game, game.currentId)}`}>
+    <div className="review-evidence-heading"><div><span className="review-kicker">SELECTED MOVE · {activeMove.side.toUpperCase()}</span><h3>{moveName(game, game.currentId)}</h3></div><span className={`review-label review-${activeMove.label.toLowerCase()}`}><span aria-hidden="true">{symbols[activeMove.label]}</span> {activeMove.label}</span></div>
+    <p>{activeMove.explanation}</p>
+    <div className="review-evidence-metrics"><span>Move score (White) <strong>{scoreText(activeMove.whiteScore)}</strong></span><span>Common depth <strong>{activeMove.actualDepth || '—'}</strong></span><span>Best / played depth <strong>{activeMove.bestDepth ?? '—'} / {activeMove.playedDepth ?? '—'}</strong></span></div>
+    {activeMove.bestSan?.length ? <div className="review-continuation"><span className="review-kicker">BEST ENGINE CONTINUATION</span><p>{activeMove.bestSan.map((san, index) => <span key={index}>{index > 0 && <FontAwesomeIcon icon={faArrowRight} aria-hidden="true" />}<span>{san}</span></span>)}</p></div> : null}
+    {activeMove.label === 'Brilliant' && <small>Engine-backed sacrifice heuristic; not proof of strategic brilliance.</small>}
+    {activeMove.label === 'Uncertain' && depth < 30 && <button type="button" className="review-deepen" disabled={running} onClick={() => { setDepth(Math.min(30, depth + 2)); setMessage('Depth increased. Start review to re-evaluate all moves under one compatible signature.') }}>Deepen uncertain moves · restart at depth {Math.min(30, depth + 2)}</button>}
+  </article> : <div className="review-empty-selection"><FontAwesomeIcon icon={faChessBoard} aria-hidden="true" /><p>{current ? 'Select a reviewed move on the graph or in Moves to see its evidence.' : 'Move-by-move evidence appears here as the review progresses.'}</p></div>
 
   return <section className="review-panel" aria-label="Automated game review">
-    <header><span className="eyebrow">ENGINE-BACKED REVIEW</span><h2>Game review</h2><p>Grades compare exact, completed scores at the same depth from the mover’s perspective. No Elo or Chess.com accuracy is claimed.</p></header>
-    <div className="review-options"><label>Target depth <input type="number" min={10} max={30} value={depth} disabled={running} onChange={event => setDepth(Math.max(10, Math.min(30, Number(event.target.value) || 10)))} /></label><label>Time per search (ms) <input type="number" min={250} max={30000} step={250} value={timeMs} disabled={running} onChange={event => setTimeMs(Math.max(250, Math.min(30000, Number(event.target.value) || 250)))} /></label></div>
-    <div className="review-actions"><button type="button" className="primary-button" disabled={running || !nodeIds.length || current?.status === 'completed'} onClick={() => void start()}>{completed && current?.status !== 'cancelled' ? 'Resume review' : 'Start review'}</button>{running && <button type="button" onClick={pause}>Pause</button>}{(running || (current && current.status !== 'completed' && current.status !== 'cancelled')) && <button type="button" onClick={cancel}>Cancel</button>}</div>
-    <p role="status">{message}</p>{storageWarning && <p role="alert" className="review-storage-warning">{storageWarning}</p>}
-    <div className="review-progress" role="progressbar" aria-valuenow={completed} aria-valuemin={0} aria-valuemax={nodeIds.length} aria-label="Reviewed moves"><div style={{ width: `${nodeIds.length ? 100 * completed / nodeIds.length : 0}%` }} /></div><small>{completed} of {nodeIds.length} mainline moves reviewed · {current?.status ?? 'not started'}</small>
-    {summary && <div className="review-quality">{(['white', 'black'] as const).map(side => <div key={side}><strong>{side === 'white' ? 'White' : 'Black'} · ChessIn quality {summary[side].quality ?? '—'}</strong><small>{summary[side].graded}/{summary[side].total} non-forced moves graded (partial coverage when incomplete)</small><span>{Object.entries(summary[side].counts).map(([label, count]) => `${label} ${count}`).join(' · ') || 'No grades yet'}</span></div>)}</div>}
-    <div className="review-graph"><h3>Evaluation · White’s perspective</h3>{graph.some(Boolean) ? <svg viewBox="0 0 600 160" role="group" aria-label="White-perspective evaluation graph; select a move with its point"><line x1="20" y1="80" x2="580" y2="80" stroke="#888" strokeDasharray="3 5" />{paths.map((d, i) => <path key={i} d={d} fill="none" stroke="#8fbd57" strokeWidth="2" />)}{graph.filter((point): point is NonNullable<typeof point> => !!point).map(point => <circle key={point.id} cx={point.x} cy={point.y} r={game.currentId === point.id ? 7 : 5} fill={game.currentId === point.id ? '#28b8bd' : '#8fbd57'} stroke="#161815" strokeWidth="2" role="button" tabIndex={0} aria-label={`Select ${point.label}`} onClick={() => onSelect(point.id)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onSelect(point.id) } }} />)}</svg> : <p>No exact evaluations available yet.</p>}</div>
-    {activeMove && <article className={`review-evidence review-${activeMove.label.toLowerCase()}`}><strong>{activeMove.san} · {symbols[activeMove.label]} {activeMove.label}</strong><p>{activeMove.explanation}</p><small>Actual common depth {activeMove.actualDepth || '—'} · best {activeMove.bestDepth ?? '—'} · played {activeMove.playedDepth ?? '—'} · White {scoreText(activeMove.whiteScore)}</small>{activeMove.bestSan?.length ? <p>Engine continuation: {activeMove.bestSan.join(' → ')}</p> : null}{activeMove.label === 'Brilliant' && <small>Engine-backed sacrifice heuristic; not proof of strategic brilliance.</small>}</article>}
-    {criticalIds.length > 0 && <div className="review-critical"><h3>Critical moves</h3><div><button type="button" onClick={() => onSelect(criticalIds[Math.max(0, criticalIndex - 1)])}>Previous critical</button><button type="button" onClick={() => onSelect(criticalIds[criticalIndex + 1] ?? criticalIds[0])}>Next critical</button></div></div>}
-    {current && <ol className="review-moves">{nodeIds.map((id, index) => { const move: ReviewMove | undefined = current.moves[id]; return <li key={id}><button type="button" className={id === game.currentId ? 'selected' : ''} onClick={() => onSelect(id)}><span>{index + 1}. {game.nodes[id].san}</span><strong className={`review-label review-${move?.label.toLowerCase() || 'pending'}`}>{move ? `${symbols[move.label]} ${move.label}` : 'Pending'}</strong></button>{move && <small>{move.explanation}</small>}</li> })}</ol>}
-    {current && current.moves[game.currentId]?.label === 'Uncertain' && depth < 30 && <button type="button" disabled={running} onClick={() => { setDepth(Math.min(30, depth + 2)); setMessage('Depth increased. Start review to re-evaluate all moves under one compatible signature.') }}>Deepen uncertain moves · restart at depth {Math.min(30, depth + 2)}</button>}
+    <header className="review-heading"><div><span className="eyebrow">ENGINE-BACKED REVIEW</span><h2>Game review</h2></div><p>Transparent move quality from exact, completed engine scores at a common depth. ChessIn quality is our own measure, not Chess.com accuracy or Elo.</p></header>
+    <div className="review-run">
+      <div className="review-run-top"><div><span className="review-kicker">MAINLINE COVERAGE</span><strong>{completed} <span>/ {nodeIds.length} moves</span></strong></div><span className={`review-run-state ${running ? 'is-running' : isComplete ? 'is-complete' : ''}`}>{running ? 'Reviewing' : isComplete ? 'Complete' : current?.status === 'cancelled' ? 'Cancelled' : current ? 'Paused' : 'Not started'}</span></div>
+      <div className="review-progress" role="progressbar" aria-valuenow={completed} aria-valuemin={0} aria-valuemax={nodeIds.length} aria-label="Reviewed moves"><div style={{ width: `${nodeIds.length ? 100 * completed / nodeIds.length : 0}%` }} /></div>
+      <div className="review-run-meta"><span>Actual depth {depthRange}</span><span>Target depth {depth} · up to {(timeMs / 1000).toLocaleString()}s per search</span></div>
+      <div className="review-actions">
+        {running ? <button type="button" className="review-main-action" onClick={pause}><FontAwesomeIcon icon={faPause} aria-hidden="true" /> Pause review</button>
+          : isComplete ? <span className="review-complete-action"><FontAwesomeIcon icon={faCircleCheck} aria-hidden="true" /> Review complete</span>
+          : <button type="button" className="review-main-action primary-button" disabled={!nodeIds.length} onClick={() => void start()}><FontAwesomeIcon icon={completed && current?.status !== 'cancelled' ? faClockRotateLeft : faPlay} aria-hidden="true" /> {completed && current?.status !== 'cancelled' ? 'Resume review' : 'Start review'}</button>}
+        {(running || (current && current.status !== 'completed' && current.status !== 'cancelled')) && <button type="button" className="review-cancel" onClick={cancel}>Cancel</button>}
+      </div>
+      <details className="review-advanced"><summary>Advanced review settings <span>Depth {depth} · {timeMs} ms</span></summary><div className="review-options"><label>Target depth <input type="number" min={10} max={30} value={depth} disabled={running} onChange={event => setDepth(Math.max(10, Math.min(30, Number(event.target.value) || 10)))} /></label><label>Time per search (ms) <input type="number" min={250} max={30000} step={250} value={timeMs} disabled={running} onChange={event => setTimeMs(Math.max(250, Math.min(30000, Number(event.target.value) || 250)))} /></label></div><small>Changing either setting starts a new compatible review; previously graded moves are not mixed with new results.</small></details>
+      <p className="review-message" role="status">{message}</p>{storageWarning && <p role="alert" className="review-storage-warning">{storageWarning}</p>}
+    </div>
+    <div className="review-tabs" role="tablist" aria-label="Review views" onKeyDown={event => { if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return; event.preventDefault(); const next = event.key === 'Home' ? 'overview' : event.key === 'End' ? 'moves' : tab === 'overview' ? 'moves' : 'overview'; setTab(next); document.getElementById(`${tabsId}-${next}-tab`)?.focus() }}>
+      {(['overview', 'moves'] as const).map(view => <button key={view} type="button" role="tab" id={`${tabsId}-${view}-tab`} aria-controls={`${tabsId}-${view}-panel`} aria-selected={tab === view} tabIndex={tab === view ? 0 : -1} onClick={() => setTab(view)}><FontAwesomeIcon icon={view === 'overview' ? faChartLine : faChessBoard} aria-hidden="true" />{view === 'overview' ? 'Overview' : 'Moves'}</button>)}
+    </div>
+    <div className="review-tab-content" role="tabpanel" id={`${tabsId}-overview-panel`} aria-labelledby={`${tabsId}-overview-tab`} tabIndex={0} hidden={tab !== 'overview'}>
+      {summary ? <>
+        <div className="review-quality">{(['white', 'black'] as const).map(side => <div className={`review-quality-card review-${side}`} key={side}><span className="review-kicker">{side.toUpperCase()} · CHESSIN QUALITY</span><strong className="review-player">{game.headers[side === 'white' ? 'White' : 'Black']?.trim() || (side === 'white' ? 'White' : 'Black')}</strong><div className="review-quality-value">{summary[side].quality === null ? '—' : summary[side].quality}<span>{summary[side].quality === null ? 'No graded moves yet' : 'out of 100'}</span></div><small>{summary[side].graded} / {summary[side].total} non-forced moves graded{summary[side].graded < summary[side].total ? ' · partial coverage' : ''}</small></div>)}</div>
+        <div className="review-counts"><div className="review-section-heading"><FontAwesomeIcon icon={faTrophy} aria-hidden="true" /><h3>Move classifications</h3></div><div className="review-counts-scroll"><table><thead><tr><th scope="col">White</th><th scope="col">Classification</th><th scope="col">Black</th></tr></thead><tbody>{classifications.map(label => <tr key={label}><td>{summary.white.counts[label] ?? 0}</td><th scope="row"><span className={`review-label review-${label.toLowerCase()}`}><span aria-hidden="true">{symbols[label]}</span> {label}</span></th><td>{summary.black.counts[label] ?? 0}</td></tr>)}</tbody></table></div></div>
+      </> : <div className="review-empty"><FontAwesomeIcon icon={faChartLine} aria-hidden="true" /><strong>{nodeIds.length ? 'Your review starts here' : 'No moves to review yet'}</strong><p>{nodeIds.length ? 'Start a review to see ChessIn quality, classification counts and move-by-move evidence. Scores remain unavailable until an exact engine review completes.' : 'Add mainline moves to this game, then start a review.'}</p></div>}
+      <div className="review-graph"><div className="review-section-heading"><FontAwesomeIcon icon={faChartLine} aria-hidden="true" /><div><h3>Evaluation graph</h3><small>White’s perspective · select a point to inspect a move</small></div></div>{graph.some(Boolean) ? <svg viewBox="0 0 600 160" role="group" aria-label="White-perspective evaluation graph; select a move with its point"><line x1="20" y1="80" x2="580" y2="80" stroke="#84917d" strokeDasharray="3 5" /><text x="20" y="69" fill="#b4bbad" fontSize="11">Equal</text>{paths.map((d, i) => <path key={i} d={d} fill="none" stroke="#8fbd57" strokeWidth="2.5" />)}{graph.filter((point): point is NonNullable<typeof point> => !!point).map(point => <g key={point.id} role="button" tabIndex={0} aria-label={`Select ${point.label}`} onClick={() => onSelect(point.id)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onSelect(point.id) } }}><circle cx={point.x} cy={point.y} r="12" fill="transparent" /><circle className="review-graph-dot" cx={point.x} cy={point.y} r={game.currentId === point.id ? 7 : 5} fill={game.currentId === point.id ? '#28b8bd' : '#8fbd57'} stroke="#161815" strokeWidth="2" /></g>)}</svg> : <p className="review-graph-empty">No exact evaluations available yet. Completed exact-score moves appear here.</p>}</div>
+      {selectedEvidence}
+      {criticalIds.length > 0 && <div className="review-critical"><div className="review-section-heading"><FontAwesomeIcon icon={faClockRotateLeft} aria-hidden="true" /><h3>Critical moves</h3></div><div><button type="button" onClick={() => onSelect(criticalIds[Math.max(0, criticalIndex - 1)])}>Previous critical</button><button type="button" onClick={() => onSelect(criticalIds[criticalIndex + 1] ?? criticalIds[0])}>Next critical</button></div></div>}
+      <p className="review-method">ChessIn quality averages graded, non-forced move losses; missing grades are excluded. Move scores evaluate the played continuation from its parent position, so mate distances begin before that move. Brilliant is an engine-backed sacrifice heuristic, not proof of strategic brilliance.</p>
+    </div>
+    <div className="review-tab-content" role="tabpanel" id={`${tabsId}-moves-panel`} aria-labelledby={`${tabsId}-moves-tab`} tabIndex={0} hidden={tab !== 'moves'}>
+      <div className="review-section-heading"><FontAwesomeIcon icon={faChessBoard} aria-hidden="true" /><div><h3>Mainline moves</h3><small>{completed} reviewed · select a move to inspect its evidence</small></div></div>
+      {nodeIds.length ? <ol className="review-moves">{nodeIds.map(id => { const move = current?.moves[id]; return <li key={id}><button type="button" className={id === game.currentId ? 'selected' : ''} aria-current={id === game.currentId ? 'step' : undefined} onClick={() => onSelect(id)}><span>{moveName(game, id)}</span><strong className={`review-label review-${move?.label.toLowerCase() || 'pending'}`}>{move ? <><span aria-hidden="true">{symbols[move.label]}</span> {move.label}</> : 'Pending'}</strong></button>{move && <small>{move.explanation}</small>}</li> })}</ol> : <div className="review-empty"><p>Add mainline moves to inspect them here.</p></div>}
+      {selectedEvidence}
+    </div>
   </section>
 }
 
