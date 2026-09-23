@@ -1,0 +1,204 @@
+.quick-engine-rail {
+  position: fixed;
+  right: 0;
+  top: 68px;
+  bottom: 0;
+  width: 44px;
+  background: #1d211c;
+  border-left: 1px solid var(--line);
+  z-index: 15;
+}
+.quick-engine-tab {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  writing-mode: vertical-rl;
+  width: 100%;
+  padding: 20px 10px;
+  background: transparent;
+  color: var(--muted);
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.quick-engine-tab svg {
+  font-size: 15px;
+}
+.quick-engine-tab[aria-expanded="true"] {
+  background: #34442b;
+  color: var(--green);
+}
+.quick-engine-drawer {
+  position: absolute;
+  right: 43px;
+  top: 0;
+  bottom: 0;
+  width: 300px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--panel);
+  border-left: 1px solid var(--line);
+  box-shadow: -16px 0 35px #0003;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  scrollbar-width: thin;
+}
+.quick-engine-drawer header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.quick-engine-drawer h2 {
+  font-size: 20px;
+  margin: 6px 0 0;
+  letter-spacing: -0.04em;
+}
+.quick-engine-drawer header button {
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  padding: 9px;
+  cursor: pointer;
+}
+.quick-engine-identity {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 13px 0;
+  border-block: 1px solid var(--line);
+  color: var(--green);
+}
+.quick-engine-identity > div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+.quick-engine-identity strong {
+  font-size: 12px;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.quick-engine-identity span {
+  font-size: 10px;
+  color: var(--muted);
+}
+.quick-engine-drawer fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 17px;
+  min-width: 0;
+}
+.quick-engine-drawer legend {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  padding: 0 0 15px;
+}
+.quick-engine-drawer label {
+  display: grid;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--ink);
+}
+.quick-engine-drawer input,
+.quick-engine-drawer select {
+  width: 100%;
+  min-width: 0;
+  background: #1a1f19;
+  border: 1px solid #465043;
+  color: var(--ink);
+  border-radius: 7px;
+  padding: 10px;
+  font: inherit;
+  color-scheme: dark;
+}
+.quick-engine-drawer small,
+.quick-engine-note,
+.quick-engine-drawer footer p {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.65;
+  margin: 0;
+}
+.quick-engine-drawer fieldset:disabled {
+  opacity: 0.5;
+}
+.quick-engine-drawer footer {
+  margin-top: auto;
+  border-top: 1px solid var(--line);
+  padding-top: 17px;
+  display: grid;
+  gap: 12px;
+}
+.quick-engine-drawer footer button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid #60784a;
+  background: #34442b;
+  color: #c7e6a4;
+  padding: 11px;
+  border-radius: 7px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.quick-engine-rail button:focus-visible,
+.quick-engine-rail input:focus-visible,
+.quick-engine-rail select:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+.analysis-layout.has-quick-settings {
+  width: calc(100% - 44px);
+  margin-right: 44px;
+}
+@media (min-width: 850px) and (max-width: 1099px) {
+  .analysis-layout.has-quick-settings {
+    grid-template-columns: minmax(280px, 1fr) minmax(290px, 360px);
+    gap: 16px;
+    padding-inline: 16px;
+  }
+}
+@media (max-width: 849px) {
+  .analysis-layout.has-quick-settings {
+    width: calc(100% - 32px);
+    margin-right: 32px;
+  }
+  .quick-engine-rail {
+    width: 32px;
+  }
+  .quick-engine-tab {
+    padding: 17px 6px;
+    font-size: 10px;
+  }
+  .quick-engine-drawer {
+    right: 31px;
+    width: min(300px, calc(100vw - 32px));
+    padding: 19px;
+  }
+}
+@media (max-width: 719px) {
+  .quick-engine-rail {
+    top: 53px;
+    bottom: 65px;
+  }
+  .quick-engine-drawer {
+    gap: 17px;
+  }
+  .quick-engine-drawer header button {
+    padding: 10px;
+  }
+  .quick-engine-drawer input,
+  .quick-engine-drawer select {
+    font-size: 16px;
+  }
+}

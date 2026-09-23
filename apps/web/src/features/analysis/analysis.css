@@ -745,24 +745,6 @@
 .analysis-layout .pv-line > span:last-child {
   overflow-wrap: anywhere;
 }
-.analysis-layout .analysis-engine-config {
-  margin-top: 17px;
-  border-top: 1px solid var(--line);
-  padding-top: 14px;
-}
-.analysis-layout .analysis-engine-config > summary {
-  font-size: 11px;
-  color: var(--muted);
-  cursor: pointer;
-}
-.analysis-layout .analysis-engine-config > summary svg {
-  margin-right: 6px;
-}
-.analysis-layout .analysis-engine-config .engine-settings {
-  margin-top: 15px;
-  padding: 0;
-  border: 0;
-}
 .analysis-layout .analysis-message {
   font-size: 11px;
   color: var(--amber);

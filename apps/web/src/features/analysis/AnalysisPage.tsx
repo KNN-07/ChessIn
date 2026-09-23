@@ -1,12 +1,12 @@
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faBackwardFast, faBackwardStep, faForwardStep, faForwardFast, faRotate, faListUl, faMicrochip, faChartLine, faPlay, faStop, faSliders, faEllipsis, faArrowUp, faTrashCan, faChessPawn, faCopy } from '@fortawesome/free-solid-svg-icons'
+import { faBackwardFast, faBackwardStep, faForwardStep, faForwardFast, faRotate, faListUl, faMicrochip, faChartLine, faPlay, faStop, faEllipsis, faArrowUp, faTrashCan, faChessPawn, faCopy } from '@fortawesome/free-solid-svg-icons'
 import { appendMove, deleteVariation, exportFen, getPosition, promoteVariation, reconstruct, selectNode, type GameDocument, type GameNode, type PositionSpec } from '@chessin/core/game'
 import type { EngineEvent, EngineScore } from '@chessin/core/engine'
 import { Chess } from 'chess.js'
 import { AnalysisBoard } from '../../components/AnalysisBoard'
 import { useEngine } from '../../engine/EngineContext'
-import { EngineSettingsPanel } from '../../engine/EngineSettingsPanel'
+import { QuickEngineSettings } from '../../engine/QuickEngineSettings'
 import { mainlineNodes, reviewSummary, type ReviewMove } from '@chessin/core/review'
 import { moveSymbols } from '../../components/move-quality'
 import './analysis.css'
@@ -20,6 +20,7 @@ const analysisTabs = [
 export interface AnalysisPageProps {
   game: GameDocument
   onChange: (game: GameDocument) => void
+  onOpenSettings: () => void
   reviewPanel?: ReactNode
   grades?: Record<string, ReviewMove>
   initialPane?: 'moves' | 'engine' | 'review'
@@ -63,7 +64,7 @@ function captured(chess: Chess, rootFen: string): { white: string; black: string
   return { white, black, advantage: value('b') - value('w') }
 }
 
-export function AnalysisPage({ game, onChange, reviewPanel, grades, initialPane = 'moves' }: AnalysisPageProps) {
+export function AnalysisPage({ game, onChange, onOpenSettings, reviewPanel, grades, initialPane = 'moves' }: AnalysisPageProps) {
   const chess = useMemo(() => reconstruct(game), [game])
   const position = useMemo(() => getPosition(game), [game])
   const engine = useEngine()
@@ -241,7 +242,7 @@ export function AnalysisPage({ game, onChange, reviewPanel, grades, initialPane 
     return rows
   }
 
-  return <section className="analysis-layout" aria-label="Analysis workspace">
+  return <section className="analysis-layout has-quick-settings" aria-label="Analysis workspace">
     <div className="board-column">
       <div className="player-strip"><span className={`player-avatar piece-${orientation === 'white' ? 'black' : 'white'}`}><FontAwesomeIcon icon={faChessPawn} /></span><div><span className="player-side">{orientation === 'white' ? 'BLACK' : 'WHITE'}</span><strong>{topName}</strong><span className="material">{topCaptures}{topAdvantage > 0 ? ` +${topAdvantage}` : ''}</span></div><span className={`turn-indicator ${(chess.turn() === 'b') === (orientation === 'white') ? 'is-turn' : ''}`} /></div>
       <div className="board-and-eval">
@@ -291,11 +292,11 @@ export function AnalysisPage({ game, onChange, reviewPanel, grades, initialPane 
         <p className="analysis-engine-status" role="status">{engineMessage}</p>
         {Object.values(lines).sort((a, b) => a.multiPv - b.multiPv).map(info => <div className="pv-line" key={info.multiPv}><span className="pv-rank">{info.multiPv}</span><div className="pv-score"><strong>{scoreLabel(whiteScore(info.score, chess.turn()))}</strong><small>depth {info.depth}</small></div><span>{pvSan(position, info.pv) || 'No legal continuation yet'}</span></div>)}
         {!Object.keys(lines).length && <div className="analysis-empty-moves"><FontAwesomeIcon icon={faMicrochip} /><strong>Find the strongest continuation.</strong><p>Start analysis above for real engine lines, evaluation and best-move arrows.</p></div>}
-        <details className="analysis-engine-config"><summary><FontAwesomeIcon icon={faSliders} /> Engine settings</summary><EngineSettingsPanel /></details>
         <p className="quality-disclaimer">Scores use White’s perspective. Mate distances and score bounds are preserved.</p>
       </div>}
       {pane === 'review' && <div className="pane-content" role="tabpanel" id={`${panelId}-review-panel`} aria-labelledby={`${panelId}-review-tab`}>{reviewPanel || <div className="empty-pane"><strong>Game review</strong><p>Review a game to understand each decision.</p></div>}</div>}
       {message && <p className="analysis-message" role="status">{message}</p>}
     </aside>
+    <QuickEngineSettings disabled={pane === 'review'} onOpenSettings={onOpenSettings} />
   </section>
 }

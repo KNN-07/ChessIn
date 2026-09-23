@@ -47,6 +47,8 @@ Drag a piece, tap source and target, or enter SAN/UCI in the labeled move input.
 
 The move list keeps the selected move visible without scrolling the whole page. Move-review scores describe the played continuation from its **parent** position; their mate distances begin before that move. They are labeled separately from live position evaluations. Terminal board evaluations follow chess rules, and changing a game tree or engine configuration clears incompatible move evidence.
 
+The **Engine** tab on the far-right screen edge opens quick analysis settings: depth/time presets, continuous search and the engine's supported line count. It stays separate from the Moves/Engine/Review content tabs and closes with Escape. Downloads, hardware limits, connection credentials and app installation remain on the full Settings page, reached through **Open full Settings**. Quick analysis controls are disabled in Review, which has its own search settings.
+
 IndexedDB stores games, preferences and reviews. Saves await transaction completion; simultaneous edits in another tab become separate copies rather than overwriting the other version. If storage is blocked or full, the current board remains in memory and shows **Unsaved** with PGN export. Browser storage is not a backup. PGN export preserves the tree; FEN copy reflects the selected position.
 
 </details>
