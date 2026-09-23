@@ -1,1 +1,134 @@
-.engine-settings{color:#eeeed2;background:#242722;border:1px solid #3e4437;border-radius:12px;padding:clamp(12px,2vw,24px);max-height:100%;overflow-y:auto;font:inherit}.engine-settings h2{margin:0 0 12px}.engine-settings fieldset{border:1px solid #3f4937;border-radius:10px;margin:16px 0;padding:14px;min-width:0}.engine-settings legend{font-weight:700;color:#b9d88b}.engine-settings p{line-height:1.4}.engine-settings .engine-badge{display:inline-block;background:#354533;color:#d5f1b3;border-radius:6px;padding:5px 9px}.engine-settings .engine-error{color:#ffd7d7;background:#583333;padding:10px;border-radius:8px}.engine-settings .engine-field{display:flex;flex-direction:column;gap:5px;margin:10px 0;min-width:0}.engine-settings .engine-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:9px}.engine-settings .engine-field input,.engine-settings .engine-field select{box-sizing:border-box;width:100%;min-width:0;padding:9px;background:#161815;color:#eeeed2;border:1px solid #65715b;border-radius:6px;font:inherit}.engine-settings .engine-field small{opacity:.8}.engine-settings .engine-actions{display:flex;flex-wrap:wrap;gap:8px;margin:9px 0}.engine-settings button{font:inherit;background:#374835;color:#eeeed2;border:1px solid #66814f;border-radius:7px;padding:9px 11px;cursor:pointer;max-width:100%;white-space:normal;text-align:left}.engine-settings button:hover{background:#476042}.engine-settings button:focus-visible,.engine-settings input:focus-visible,.engine-settings select:focus-visible{outline:2px solid #8fbd57;outline-offset:2px}.engine-settings button:disabled{opacity:.55;cursor:not-allowed}.engine-settings progress{display:block;width:100%;accent-color:#8fbd57}.engine-settings .engine-consent{display:flex;gap:8px;align-items:flex-start}.engine-settings .engine-consent input{margin-top:5px;accent-color:#8fbd57}@media(max-width:719px){.engine-settings{padding:12px}.engine-settings fieldset{padding:10px}}
+.settings-page { max-width: 1120px; margin: 0 auto; padding: clamp(24px, 4vw, 52px); }
+.settings-page-heading { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 30px; }
+.settings-page-heading h1 { margin: 9px 0 10px; font-size: clamp(32px, 4vw, 44px); font-weight: 750; letter-spacing: -.045em; }
+.settings-page-heading p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
+.settings-local-note { flex: none; padding-bottom: 3px; font-size: 12px; color: var(--muted); }
+.engine-settings { container-type: inline-size; min-width: 0; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 16px; font-size: 13px; line-height: 1.55; box-shadow: 0 12px 40px #00000012; }
+.engine-settings p { margin: 0; }
+.engine-settings .settings-overview { display: flex; align-items: center; gap: 13px; padding: 24px 28px; background: linear-gradient(110deg, #303a2b80, transparent 75%); border-radius: 16px 16px 0 0; }
+.settings-engine-icon { flex: none; display: grid; place-items: center; width: 42px; height: 42px; color: var(--green); background: #8fbd5712; border: 1px solid #8fbd572a; border-radius: 11px; font-size: 20px; }
+.settings-engine-identity { display: grid; gap: 3px; min-width: 0; }
+.settings-kicker { font-size: 9px; font-weight: 750; letter-spacing: .16em; color: #a5b69a; }
+.settings-engine-identity strong { font-size: 15px; font-weight: 650; overflow-wrap: anywhere; }
+.settings-provider { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; padding: 5px 9px; border: 1px solid #49513e; border-radius: 20px; color: #c5d8b2; font-size: 11px; white-space: nowrap; }
+.settings-provider > span { width: 5px; height: 5px; border-radius: 50%; background: var(--green); }
+.engine-settings .settings-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; padding: 0 28px; border-bottom: 1px solid var(--line); }
+.engine-settings .settings-tabs button { display: flex; align-items: center; justify-content: center; gap: 9px; min-height: 51px; margin: 0; padding: 12px 8px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: transparent; color: var(--muted); font: inherit; font-weight: 600; cursor: pointer; }
+.engine-settings .settings-tabs button svg { font-size: 14px; width: 16px; }
+.engine-settings .settings-tabs button:hover { color: var(--ink); background: #ffffff04; filter: none; }
+.engine-settings .settings-tabs button[aria-selected="true"] { border-bottom-color: var(--green); color: #b9dd8e; }
+.settings-content { min-width: 0; padding: 28px; }
+.settings-section-heading { display: flex; justify-content: space-between; align-items: start; gap: 16px; margin-bottom: 23px; }
+.engine-settings .settings-section-heading h2 { margin: 0 0 5px; font-size: 20px; font-weight: 650; letter-spacing: -.025em; color: var(--ink); }
+.engine-settings .settings-section-heading p { font-size: 13px; color: var(--muted); line-height: 1.6; }
+.settings-tag { flex: none; border-radius: 5px; padding: 4px 7px; font-size: 9px; font-weight: 700; letter-spacing: .07em; color: #b3ce99; background: #8fbd5710; border: 1px solid #8fbd5720; }
+.settings-tag.neutral { color: var(--muted); background: #ffffff04; border-color: var(--line); }
+.engine-profile-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.engine-settings .engine-profile { display: flex; align-items: start; gap: 11px; min-width: 0; padding: 18px 16px; border: 1px solid #444b3e; border-radius: 10px; background: #1c211a70; cursor: pointer; transition: border-color .15s, background .15s; }
+.engine-settings .engine-profile:hover { border-color: #71845e; background: #2b3426; }
+.engine-settings .engine-profile.selected { border-color: var(--green); background: linear-gradient(110deg, #35462a, #2a3525); box-shadow: 0 0 0 1px #8fbd5710; }
+.engine-settings .engine-profile.unavailable { opacity: .48; cursor: not-allowed; }
+.engine-profile input { flex: none; width: 15px; height: 15px; margin: 3px 0 0; accent-color: var(--green); color-scheme: dark; }
+.profile-copy { display: grid; gap: 4px; width: 100%; min-width: 0; }
+.profile-title { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 5px 10px; font-size: 14px; font-weight: 650; line-height: 1.45; }
+.profile-size { color: #aebba3; font-size: 10px; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.profile-description { color: #bfccb5; font-size: 11px; }
+.profile-caption { color: #899980; font-size: 10px; margin-top: 2px; }
+.selected .profile-caption { color: #afc397; }
+.engine-storage-state { display: flex; align-items: center; gap: 11px; margin: 22px 0 18px; padding: 14px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.storage-state-dot { flex: none; width: 7px; height: 7px; background: #95a389; border-radius: 50%; }
+.engine-storage-state.ready .storage-state-dot { background: var(--green); box-shadow: 0 0 0 4px #8fbd570e; }
+.engine-storage-state > div { display: grid; gap: 2px; }
+.engine-storage-state strong { font-size: 12px; font-weight: 600; }
+.engine-storage-state > div > span { color: var(--muted); font-size: 11px; }
+.storage-total { margin-left: auto; color: #9da993; font-size: 11px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.engine-settings .engine-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; margin-top: 16px; }
+.engine-settings .engine-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 41px; max-width: 100%; padding: 10px 15px; border: 1px solid #4a5343; border-radius: 8px; background: #30362c; color: #d5decc; font: inherit; font-size: 12px; font-weight: 600; line-height: 1.45; text-align: center; white-space: normal; cursor: pointer; }
+.engine-settings .engine-button:hover:not(:disabled) { background: #3b4433; border-color: #728260; filter: none; }
+.engine-settings .engine-button:disabled { opacity: .4; cursor: not-allowed; }
+.engine-settings .engine-danger { color: #df9e95; background: transparent; border-color: #744d453f; }
+.engine-settings .engine-danger:hover:not(:disabled) { background: #7a342229; border-color: #9e6258; }
+.engine-settings button:focus-visible, .engine-settings input:focus-visible, .engine-settings select:focus-visible, .engine-settings summary:focus-visible, .engine-settings [role="tabpanel"]:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; }
+.engine-settings .engine-profile:focus-within { outline: 2px solid var(--green); outline-offset: 3px; }
+.engine-settings .engine-profile input:focus-visible { outline: none; }
+.engine-settings .settings-help { color: var(--muted); font-size: 11px; line-height: 1.65; margin-top: 14px; }
+.engine-settings .engine-error { margin: 20px 28px 0; padding: 13px 15px; border: 1px solid #af6b5b55; border-radius: 8px; color: #f1b3a5; background: #5e30262b; overflow-wrap: anywhere; }
+.settings-details { border-top: 1px solid var(--line); margin-top: 23px; }
+.settings-details summary { padding: 17px 0 0; color: #b0bda5; font-size: 12px; font-weight: 550; cursor: pointer; list-style-position: inside; }
+.settings-details summary:hover { color: var(--ink); }
+.settings-details-body { padding-top: 4px; }
+.engine-settings .settings-details-body .engine-actions { margin-bottom: 2px; }
+.engine-download-progress { display: block; margin-top: 16px; font-size: 11px; color: #b8caa6; }
+.engine-download-progress progress { display: block; width: 100%; height: 5px; margin-top: 8px; accent-color: var(--green); border: 0; border-radius: 4px; overflow: hidden; }
+.engine-settings .engine-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 8px; }
+.engine-settings .engine-field { display: flex; flex-direction: column; align-items: stretch; gap: 8px; min-width: 0; margin: 0 0 19px; color: #ced8c5; font-size: 12px; font-weight: 550; }
+.engine-settings .settings-content .engine-field input, .engine-settings .settings-content .engine-field select { display: block; width: 100%; min-width: 0; height: 44px; padding: 11px 12px; background: #191e17; border: 1px solid #49523f; border-radius: 8px; color: var(--ink); font: inherit; font-size: 13px; color-scheme: dark; }
+.engine-settings .engine-field input:hover, .engine-settings .engine-field select:hover { border-color: #657857; }
+.engine-settings .engine-field input:disabled { color: var(--muted); background: #22271f; cursor: not-allowed; }
+.engine-settings .engine-field input::placeholder { color: #75816d; font-weight: 400; }
+.engine-settings .engine-field select { padding-right: 30px; }
+.engine-settings .engine-field small { color: #8e9d83; font-size: 10px; font-weight: 400; line-height: 1.5; }
+.engine-connection-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.settings-notice { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; padding: 15px 17px; background: #8fbd5709; border: 1px dashed #59694b; border-radius: 9px; margin-bottom: 22px; }
+.settings-notice p { flex: 1 1 240px; font-size: 12px; color: #b6c4ab; }
+.engine-settings .settings-privacy-note { border-left: 2px solid #7c9e55; padding: 2px 0 2px 16px; margin: 0 0 25px; }
+.settings-privacy-note strong { font-size: 12px; font-weight: 600; color: #c3d9af; }
+.engine-settings .settings-privacy-note p { color: var(--muted); margin-top: 5px; font-size: 12px; line-height: 1.7; max-width: 620px; }
+.engine-settings .engine-consent { display: flex; align-items: start; gap: 10px; padding: 14px; background: #1b201880; border: 1px solid var(--line); border-radius: 8px; font-size: 12px; color: #bfcab5; cursor: pointer; }
+.engine-consent input { flex: none; margin: 2px 0 0; width: 16px; height: 16px; accent-color: var(--green); color-scheme: dark; }
+.settings-footnote { display: flex; align-items: center; gap: 8px; color: #aebe9f; font-size: 11px; margin-top: 21px; }
+.settings-footnote .storage-state-dot { width: 5px; height: 5px; background: var(--green); }
+.settings-install-card { display: flex; align-items: center; gap: 18px; margin-bottom: 20px; }
+.settings-install-card img { flex: none; border-radius: 15px; border: 1px solid #4e5a42; }
+.settings-install-card strong { font-size: 17px; font-weight: 650; }
+.engine-settings .settings-install-card p { color: var(--muted); font-size: 12px; margin-top: 4px; }
+.settings-manual-install { padding: 18px; background: #1c211a80; border: 1px solid var(--line); border-radius: 10px; margin-bottom: 24px; }
+.settings-manual-install strong { font-size: 12px; }
+.engine-settings .settings-manual-install p { color: #b7c4ac; font-size: 12px; line-height: 1.9; margin: 8px 0; }
+.settings-manual-install small { color: var(--muted); font-size: 11px; }
+.settings-install-card ~ .engine-actions { margin-bottom: 26px; }
+.settings-status { display: flex; align-items: center; gap: 9px; padding: 14px 28px; border-top: 1px solid var(--line); background: #1e231c60; border-radius: 0 0 16px 16px; color: #96a58b; font-size: 11px; overflow-wrap: anywhere; }
+.settings-status-mark { flex: none; width: 5px; height: 5px; border: 1px solid #88977c; border-radius: 50%; }
+@container (max-width: 620px) {
+  .engine-settings .settings-overview { padding: 20px; }
+  .engine-settings .settings-tabs { padding: 0 15px; gap: 2px; }
+  .settings-content { padding: 22px 20px; }
+  .settings-section-heading { flex-wrap: wrap; gap: 10px; }
+  .engine-connection-fields { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .engine-settings .engine-profile { padding: 15px 12px; gap: 8px; }
+  .profile-title { font-size: 12px; }
+  .profile-size { font-size: 9px; }
+  .engine-settings .engine-fields { gap: 10px; }
+  .storage-total { display: none; }
+  .settings-status { padding: 14px 20px; }
+}
+@container (max-width: 380px) {
+  .engine-settings .settings-overview { padding: 16px; gap: 9px; }
+  .settings-engine-icon { width: 33px; height: 33px; font-size: 16px; border-radius: 9px; }
+  .settings-engine-identity strong { font-size: 12px; }
+  .settings-kicker { font-size: 8px; }
+  .settings-provider { font-size: 9px; padding: 4px 7px; }
+  .engine-settings .settings-tabs { padding: 0 8px; }
+  .engine-settings .settings-tabs button { flex-direction: column; gap: 5px; font-size: 10px; padding: 12px 2px; }
+  .engine-settings .settings-tabs button svg { font-size: 13px; }
+  .settings-content { padding: 21px 16px; }
+  .engine-settings .settings-section-heading h2 { font-size: 18px; }
+  .engine-settings .settings-section-heading p { font-size: 12px; }
+  .engine-profile-grid { grid-template-columns: minmax(0, 1fr); gap: 9px; }
+  .profile-title { font-size: 13px; }
+  .profile-caption { margin-top: 0; }
+  .engine-settings .engine-fields { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .engine-settings .engine-button { width: 100%; min-height: 44px; }
+  .engine-settings .engine-error { margin: 16px 16px 0; }
+  .settings-status { padding: 12px 16px; }
+}
+@media (max-width: 719px) {
+  .settings-page { padding: 22px 12px 24px; }
+  .settings-page-heading { margin-bottom: 23px; padding: 0 6px; }
+  .settings-page-heading h1 { font-size: 33px; }
+  .settings-page-heading p { font-size: 12px; }
+  .settings-local-note { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .engine-settings *, .engine-settings *::before, .engine-settings *::after { transition: none !important; }
+}

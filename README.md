@@ -128,6 +128,6 @@ ChessIn is [GPLv3](LICENSE). Stockfish.js © 2026 Chess.com, LLC, port by Nathan
 
 `npm run build` packages application source, lockfile and deployment scripts as `/sources/chessin-source.tar.gz`, excluding binaries, generated caches, environment files and logs. Keep the corresponding-source files available alongside binary distributions; upstream links alone are not the distribution. Do not remove `/sources` to shrink a public deployment unless you provide equivalent GPL-compliant corresponding source.
 
-`npm run typecheck` checks both applications; `npm test` runs the deterministic Vitest regressions for PGN/game legality, UCI protocol boundaries, review and timed-play rules. These checks supplement, rather than replace, real browser and native-engine verification. The artwork in this README is original, and no external fonts or logo assets are used.
+`npm run typecheck` checks both applications; `npm test` runs the deterministic Vitest regressions for PGN/game legality, UCI protocol boundaries, review and timed-play rules. These checks supplement, rather than replace, real browser and native-engine verification. The ChessIn logo is original. Navigation and settings use [Font Awesome Free](https://fontawesome.com/search?ic=free) SVG icons, bundled locally for offline use rather than loaded from a CDN. Font Awesome's icon/code licenses are included in the app's third-party notices.
 
 </details>

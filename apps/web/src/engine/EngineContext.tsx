@@ -118,7 +118,7 @@ export function EngineProvider({ children }: { children: ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
   const [provider, setProvider] = useState<'local' | 'remote'>('local');
   const [profile, updateProfile] = useState<EngineProfile>('stockfish-lite-single');
-  const [status, setStatus] = useState('Download local engine to analyze.');
+  const [status, setStatus] = useState('No engine initialized.');
   const [installed, setInstalled] = useState<Installed>({ 'stockfish-lite-single': false, 'stockfish-lite-threaded': false, 'stockfish-full-single': false, 'stockfish-full-threaded': false });
   const [storageAvailable, setStorageAvailable] = useState(false);
   const [controlled, setControlled] = useState(false);
@@ -219,7 +219,7 @@ export function EngineProvider({ children }: { children: ReactNode }) {
       threads: value.endsWith('threaded') && !profile.endsWith('threaded') ? Math.min(2, hardwareThreads(value)) : previous.threads,
     }, null, value, 'local'));
     setOnlineConsent(false);
-    setStatus(`Selected ${value}. Download or choose Run online.`);
+    setStatus('Local engine profile selected. Initialize it when ready.');
   };
   const download = async (value: EngineProfile) => {
     if (value.includes('threaded') && !canThread()) throw new Error('This host does not support threaded WASM; choose a single-thread profile.');
