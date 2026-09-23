@@ -1,0 +1,29 @@
+{
+  "name": "chessin",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @chessin/web",
+    "dev:server": "npm run dev -w @chessin/engine-server",
+    "prebuild": "node scripts/prepare-app-source.mjs",
+    "build": "npm run build -w @chessin/core && npm run build -w @chessin/web && npm run build -w @chessin/engine-server",
+    "start:server": "npm run start -w @chessin/engine-server",
+    "preview": "npm run preview -w @chessin/web --",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p apps/web && tsc --noEmit -p apps/engine-server",
+    "prepare:engines": "node scripts/prepare-engines.mjs",
+    "prepare:cloudflare": "node scripts/prepare-cloudflare.mjs",
+    "deploy:cloudflare": "npm run prepare:engines && npm run build && npm run prepare:cloudflare && wrangler deploy"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "~5.9.3",
+    "vitest": "^4.0.0",
+    "wrangler": "4.137.0"
+  }
+}

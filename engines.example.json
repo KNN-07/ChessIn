@@ -1,0 +1,11 @@
+{
+  "engines": [
+    {
+      "id": "stockfish",
+      "name": "Stockfish",
+      "command": "/opt/stockfish/stockfish-linux-x86-64-universal",
+      "args": [],
+      "options": {}
+    }
+  ]
+}

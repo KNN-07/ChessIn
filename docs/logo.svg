@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 180" role="img" aria-labelledby="title desc">
+  <title id="title">ChessIn</title>
+  <desc id="desc">A green knight on a charcoal square beside the ChessIn wordmark.</desc>
+  <rect width="520" height="180" rx="32" fill="#161815"/>
+  <rect x="4" y="4" width="172" height="172" rx="38" fill="#242722"/>
+  <path d="M55 139h86v13H48v-13h7Zm10-10c3-16 15-27 28-38-7-8-12-19-14-29l-12 7-15-3-8-12 20-10 9-17 11 15 12-7 16 5-4 13 9 18c14 18 23 37 24 58H65Z" fill="#8fbd57"/>
+  <path d="m44 54 20-10 9-17 11 15 12-7 16 5-4 13 9 18c14 18 23 37 24 58H65c3-16 15-27 28-38-7-8-12-19-14-29l-12 7-15-3-8-12Z" fill="none" stroke="#d6eab9" stroke-width="2" stroke-linejoin="round"/>
+  <circle cx="85" cy="51" r="4" fill="#161815"/>
+  <path d="m53 58 11 1" fill="none" stroke="#161815" stroke-width="3" stroke-linecap="round"/>
+  <path d="M59 138h79" stroke="#d6eab9" stroke-width="2" stroke-linecap="round"/>
+  <text x="208" y="119" fill="#eeeed2" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="84" font-weight="750" letter-spacing="-5">Chess<tspan fill="#8fbd57">In</tspan></text>
+  <path d="M211 143h268" stroke="#8fbd57" stroke-width="3" stroke-linecap="round" opacity=".7"/>
+</svg>

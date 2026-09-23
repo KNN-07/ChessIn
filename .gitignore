@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.env
+.env.*
+.dev.vars*
+.wrangler/
+.cloudflare/
+*.log
+apps/web/public/engines/**/*.wasm
+apps/web/public/engines/**/stockfish*.js
+apps/web/public/sources/

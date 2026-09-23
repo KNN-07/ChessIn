@@ -1,0 +1,17 @@
+{
+  "name": "@chessin/engine-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "tsx src/server.ts"
+  },
+  "dependencies": {
+    "@chessin/core": "*",
+    "fastify": "^5.0.0",
+    "@fastify/cors": "^11.0.0",
+    "chess.js": "~1.4.0"
+  }
+}
