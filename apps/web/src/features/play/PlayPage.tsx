@@ -297,8 +297,8 @@ export function PlayPage({ game, onChange, onReview, onActiveChange, onSuspendRe
   const selectedIncrement = preset === 'custom' ? increment : presets[preset][1]
   const timeSummary = selectedMinutes === null ? 'Untimed' : `${selectedMinutes}+${selectedIncrement}`
   const strengthSummary = strength === 'full' ? 'Full strength' : strength === 'elo'
-    ? eloSupported?.type === 'check' && eloOption?.type === 'spin' ? `Engine Elo ${elo ?? Number(eloOption.default ?? eloOption.min ?? 0)}` : engine.descriptor ? 'Elo unavailable · choose Full strength' : 'Elo · initialize engine'
-    : skillOption ? `Skill level ${Math.max(skillMin, Math.min(skillMax, skill))}` : engine.descriptor ? 'Skill unavailable · choose Full strength' : 'Skill · initialize engine'
+    ? eloSupported?.type === 'check' && eloOption?.type === 'spin' ? `Engine Elo ${elo ?? Number(eloOption.default ?? eloOption.min ?? 0)}` : engine.descriptor ? 'Elo unavailable · choose Full strength' : 'Elo · awaiting engine'
+    : skillOption ? `Skill level ${Math.max(skillMin, Math.min(skillMax, skill))}` : engine.descriptor ? 'Skill unavailable · choose Full strength' : 'Skill · awaiting engine'
   const handleTabKey = <T extends string>(event: KeyboardEvent<HTMLButtonElement>, tabs: readonly { id: T }[], index: number, select: (id: T) => void) => {
     const next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1
       : event.key === 'ArrowRight' ? (index + 1) % tabs.length
@@ -351,7 +351,7 @@ export function PlayPage({ game, onChange, onReview, onActiveChange, onSuspendRe
           <fieldset className="play-fieldset play-strength"><legend>Engine strength</legend><p>Only controls advertised by the selected engine appear after it is initialized.</p>
             {skillOption && skillMax >= skillMin && <label className="play-strength-option"><input type="radio" name="play-strength" checked={strength === 'skill'} onChange={() => setStrength('skill')} /><span>Skill level</span><output>{Math.max(skillMin, Math.min(skillMax, skill))}</output></label>}
             {skillOption && skillMax >= skillMin && strength === 'skill' && <label className="play-range"><span>Choose skill level <small>{skillMin}–{skillMax}</small></span><input type="range" aria-label="Skill level" min={skillMin} max={skillMax} value={Math.max(skillMin, Math.min(skillMax, skill))} onChange={event => setSkill(Number(event.target.value))} /></label>}
-            {!engine.descriptor && strength === 'skill' && <p className="play-strength-pending">Skill level {skill} requested. Initialize the engine to confirm this control is available, or choose Full strength.</p>}
+            {!engine.descriptor && strength === 'skill' && <p className="play-strength-pending">Skill level {skill} requested. Download or connect an engine in the Engine tab; supported controls appear automatically when it is ready.</p>}
             {engine.descriptor && ((strength === 'skill' && !skillOption) || (strength === 'elo' && (!eloOption || eloSupported?.type !== 'check'))) && <p className="play-strength-pending">This engine does not support the selected strength control. Choose Full strength or another supported option.</p>}
             {eloSupported?.type === 'check' && eloOption?.type === 'spin' && <label className="play-strength-option"><input type="radio" name="play-strength" checked={strength === 'elo'} onChange={() => setStrength('elo')} /><span>Engine Elo</span><input type="number" aria-label="Engine Elo" min={eloOption.min} max={eloOption.max} value={elo ?? Number(eloOption.default ?? eloOption.min ?? 0)} onChange={event => setElo(Number(event.target.value))} /></label>}
             <label className="play-strength-option"><input type="radio" name="play-strength" checked={strength === 'full'} onChange={() => setStrength('full')} /><span>Full strength</span><FontAwesomeIcon icon={faBolt} aria-hidden="true" /></label>

@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { EngineDescriptor, EngineSettings, ResourceCaps, SearchLimit } from '@chessin/core/engine';
 import { getSetting, putSetting, flushSaves, hasUnsavedGames } from '../storage/db';
 import { EngineController } from './engine-controller';
@@ -17,6 +17,7 @@ type EngineContextValue = {
   setLimit(limit: SearchLimit): void;
   provider: 'local' | 'remote';
   status: string;
+  initializing: boolean;
   ensureReady(): Promise<EngineDescriptor>;
   profile: EngineProfile;
   setProfile(profile: EngineProfile): Promise<void>;
@@ -73,7 +74,13 @@ function constrain(settings: EngineSettings, descriptor: EngineDescriptor | null
 
 type WorkerReply = { type: 'status'; installed: Installed } | { type: 'complete' | 'cancelled' | 'removed' };
 async function workerMessage(message: object, progress?: (data: { type: string; loaded?: number; total?: number; file?: string }) => void): Promise<WorkerReply> {
-  const registration = await navigator.serviceWorker.getRegistration();
+  let registration = await navigator.serviceWorker.getRegistration();
+  if (!registration?.active && import.meta.env.PROD) {
+    registration = await new Promise<ServiceWorkerRegistration>((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('Offline setup did not finish. Retry or explicitly run online.')), 15000);
+      navigator.serviceWorker.ready.then(value => { clearTimeout(timeout); resolve(value); }, error => { clearTimeout(timeout); reject(error); });
+    });
+  }
   const worker = registration?.active;
   if (!worker) throw new Error('Offline storage unavailable. You can run online with explicit consent.');
   // Promise.withResolvers is unavailable on the supported Safari 16 baseline.
@@ -130,6 +137,15 @@ export function EngineProvider({ children }: { children: ReactNode }) {
   const [remoteEngines, setRemoteEngines] = useState<EngineDescriptor[]>([]);
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [initializing, setInitializing] = useState(false);
+  const initialization = useRef<Promise<EngineDescriptor> | null>(null);
+  const generation = useRef(0);
+  const autoAttempt = useRef<string | null>(null);
+  const invalidateInitialization = () => {
+    generation.current++;
+    initialization.current = null;
+    setInitializing(false);
+  };
   const offlineReady = controlled && installed[profile];
 
   const refreshInstallations = useCallback(async () => {
@@ -183,9 +199,9 @@ export function EngineProvider({ children }: { children: ReactNode }) {
     window.addEventListener('beforeinstallprompt', onPrompt);
     return () => window.removeEventListener('beforeinstallprompt', onPrompt);
   }, []);
-  useEffect(() => () => { void controller.dispose(); }, [controller]);
+  useEffect(() => () => { generation.current++; initialization.current = null; void controller.dispose(); }, [controller]);
   useEffect(() => {
-    controller.onFailure = message => { setStatus(message); setDescriptor(null); };
+    controller.onFailure = message => { initialization.current = null; setStatus(message); setDescriptor(null); };
     return () => { controller.onFailure = undefined; };
   }, [controller]);
   useEffect(() => {
@@ -208,8 +224,11 @@ export function EngineProvider({ children }: { children: ReactNode }) {
   const setProfile = async (value: EngineProfile) => {
     if (controller.isPlayActive()) throw new Error('Suspend the current game before changing engines.');
     if (value.includes('threaded') && !canThread()) throw new Error('Threaded engines need a cross-origin isolated HTTPS host and SharedArrayBuffer.');
+    invalidateInitialization();
+    const selectedGeneration = generation.current;
     controller.cancel();
     await controller.use(null);
+    if (generation.current !== selectedGeneration) return;
     setProvider('local');
     setRemoteAdapter(null);
     setDescriptor(null);
@@ -219,7 +238,7 @@ export function EngineProvider({ children }: { children: ReactNode }) {
       threads: value.endsWith('threaded') && !profile.endsWith('threaded') ? Math.min(2, hardwareThreads(value)) : previous.threads,
     }, null, value, 'local'));
     setOnlineConsent(false);
-    setStatus('Local engine profile selected. Initialize it when ready.');
+    setStatus('Local profile selected. Installed engines start automatically.');
   };
   const download = async (value: EngineProfile) => {
     if (value.includes('threaded') && !canThread()) throw new Error('This host does not support threaded WASM; choose a single-thread profile.');
@@ -231,15 +250,18 @@ export function EngineProvider({ children }: { children: ReactNode }) {
       }
       if (navigator.storage?.persist) await navigator.storage.persist().catch(() => false);
       setProgress({ profile: value, loaded: 0, total: profileSize(value) });
-      await workerMessage({ type: 'DOWNLOAD', profile: value }, message => setProgress({ profile: value, loaded: message.loaded ?? 0, total: message.total ?? profileSize(value), file: message.file }));
+      const result = await workerMessage({ type: 'DOWNLOAD', profile: value }, message => setProgress({ profile: value, loaded: message.loaded ?? 0, total: message.total ?? profileSize(value), file: message.file }));
+      if (result.type !== 'complete') { await refreshInstallations(); setStatus('Engine download cancelled.'); return; }
+      autoAttempt.current = null;
+      setStatus('Complete engine pair installed. Selected local engines start automatically.');
       await refreshInstallations();
-      setStatus(navigator.serviceWorker.controller ? 'Complete engine pair installed. Ready offline.' : 'Engine installed. Reload to control the app shell for offline use.');
     } catch (error) { setStatus(error instanceof Error ? error.message : 'Engine download failed.'); throw error; }
     finally { setProgress(null); }
   };
   const cancelDownload = async (value: EngineProfile) => { await workerMessage({ type: 'CANCEL_DOWNLOAD', profile: value }); };
   const remove = async (value: EngineProfile) => {
     if (controller.isPlayActive()) throw new Error('Suspend the game before removing its engine.');
+    invalidateInitialization();
     controller.cancel();
     await controller.use(null);
     setDescriptor(null);
@@ -248,41 +270,88 @@ export function EngineProvider({ children }: { children: ReactNode }) {
     setStatus('Engine removed from offline storage.');
   };
   const runOnline = () => { setOnlineConsent(true); setStatus('Online execution allowed for this session; no offline storage is claimed.'); };
-  const ensureReady = async (): Promise<EngineDescriptor> => {
+  const ensureReady = (): Promise<EngineDescriptor> => {
     if (provider === 'remote') {
-      if (!navigator.onLine) throw new Error('Remote engine unavailable offline. Switch to a downloaded local engine.');
-      if (!remoteAdapter || !controller.hasAdapter()) throw new Error('Remote engine disconnected. Reconnect or switch to local.');
+      if (!navigator.onLine) return Promise.reject(new Error('Remote engine unavailable offline. Switch to a downloaded local engine.'));
+      if (!remoteAdapter || !controller.hasAdapter()) return Promise.reject(new Error('Remote engine disconnected. Reconnect or switch to local.'));
       return remoteAdapter.initialize();
     }
-    if (profile.includes('threaded') && !canThread()) throw new Error('This host cannot run threaded WASM. Switch to lite-single.');
-    if (descriptor?.id === profile && controller.hasAdapter()) return descriptor;
-    let present = false;
-    try {
-      const result = await workerMessage({ type: 'STATUS' });
-      if (result.type !== 'status') throw new Error('Invalid engine installation status');
-      setInstalled(result.installed);
-      present = result.installed[profile] === true;
-    } catch { setStorageAvailable(false); }
-    const usableOffline = !!navigator.serviceWorker?.controller && present;
-    if (!usableOffline && !(onlineConsent && navigator.onLine)) throw new Error(present && !navigator.serviceWorker.controller
-      ? 'Reload once to enable the installed offline engine, or explicitly choose Run online.'
-      : `Download local engine · ${(profileSize(profile) / 1e6).toFixed(1)} MB, or explicitly choose Run online.`);
-    try {
-      const local = new LocalEngine(profile);
-      await controller.use(local);
-      const initialized = await local.initialize();
-      updateSettings(previous => constrain(previous, initialized, profile, 'local'));
-      setDescriptor(initialized);
-      setStatus(`${initialized.name} · ${usableOffline ? 'Ready offline' : 'Online only; offline storage unavailable'}`);
-      return initialized;
-    } catch (error) {
-      setDescriptor(null);
-      await controller.use(null);
-      await refreshInstallations();
-      setStatus(error instanceof Error ? error.message : 'Local engine failed to start.');
-      throw error;
-    }
+    if (initialization.current) return initialization.current;
+    if (descriptor?.id === profile && controller.hasAdapter()) return Promise.resolve(descriptor);
+    const currentGeneration = generation.current;
+    const assertCurrent = () => {
+      if (generation.current !== currentGeneration) throw new Error('Engine selection changed during initialization.');
+    };
+    setInitializing(true);
+    setStatus('Starting local engine…');
+    const pending = (async () => {
+      let local: LocalEngine | undefined;
+      try {
+        if (profile.includes('threaded') && !canThread()) throw new Error('This host cannot run threaded WASM. Switch to lite-single.');
+        let present = false;
+        try {
+          const result = await workerMessage({ type: 'STATUS' });
+          assertCurrent();
+          if (result.type !== 'status') throw new Error('Invalid engine installation status');
+          setInstalled(result.installed);
+          present = result.installed[profile] === true;
+        } catch (error) { assertCurrent(); setStorageAvailable(false); if (!onlineConsent) throw error; }
+        if (present && !navigator.serviceWorker.controller) {
+          await new Promise<void>((resolve, reject) => {
+            const ready = () => {
+              if (!navigator.serviceWorker.controller) return;
+              clearTimeout(timeout);
+              navigator.serviceWorker.removeEventListener('controllerchange', ready);
+              resolve();
+            };
+            const timeout = setTimeout(() => {
+              navigator.serviceWorker.removeEventListener('controllerchange', ready);
+              reject(new Error('Offline setup did not take control. Retry or explicitly run online.'));
+            }, 15000);
+            navigator.serviceWorker.addEventListener('controllerchange', ready);
+            ready();
+          });
+        }
+        assertCurrent();
+        const usableOffline = !!navigator.serviceWorker?.controller && present;
+        if (!usableOffline && !(onlineConsent && navigator.onLine)) throw new Error(`Download local engine · ${(profileSize(profile) / 1e6).toFixed(1)} MB, or explicitly choose Run online.`);
+        local = new LocalEngine(profile);
+        await controller.use(local);
+        assertCurrent();
+        const initialized = await local.initialize();
+        assertCurrent();
+        updateSettings(previous => constrain(previous, initialized, profile, 'local'));
+        setDescriptor(initialized);
+        setStatus(`${initialized.name} · ${usableOffline ? 'Ready offline' : 'Online only; offline storage unavailable'}`);
+        return initialized;
+      } catch (error) {
+        if (generation.current === currentGeneration) {
+          setDescriptor(null);
+          await controller.use(null);
+          if (generation.current === currentGeneration) {
+            initialization.current = null;
+            setStatus(error instanceof Error ? error.message : 'Local engine failed to start.');
+          }
+        } else await local?.dispose();
+        throw error;
+      } finally {
+        if (generation.current === currentGeneration) setInitializing(false);
+      }
+    })();
+    initialization.current = pending;
+    return pending;
   };
+  useEffect(() => {
+    if (!hydrated || provider !== 'local' || (!controlled && !onlineConsent) || (!installed[profile] && !onlineConsent)) {
+      autoAttempt.current = null;
+      return;
+    }
+    const key = `${profile}:${onlineConsent}`;
+    if (autoAttempt.current === key) return;
+    autoAttempt.current = key;
+    // One attempt per selected, usable profile; failures require explicit retry.
+    void ensureReady().catch(() => {});
+  }, [hydrated, provider, profile, controlled, installed[profile], onlineConsent]);
   const testRemote = async (endpoint: string, token: string): Promise<EngineDescriptor[]> => {
     const catalog = await RemoteEngine.discover(endpoint, token);
     setRemoteEngines(catalog.engines);
@@ -295,6 +364,7 @@ export function EngineProvider({ children }: { children: ReactNode }) {
     if (!engineId) throw new Error('Test the connection and select an engine first.');
     if (controller.isPlayActive()) throw new Error('Suspend the game before changing providers.');
     const { adapter, engines } = await RemoteEngine.connect(endpoint, token, engineId);
+    invalidateInitialization();
     await controller.use(adapter);
     setRemoteAdapter(adapter);
     setRemoteEngines(engines);
@@ -308,6 +378,7 @@ export function EngineProvider({ children }: { children: ReactNode }) {
   };
   const disconnectRemote = async () => {
     if (controller.isPlayActive()) throw new Error('Suspend the game before switching providers.');
+    invalidateInitialization();
     await controller.use(null);
     setRemoteAdapter(null);
     setDescriptor(null);
@@ -318,6 +389,7 @@ export function EngineProvider({ children }: { children: ReactNode }) {
   const clearHash = async () => {
     if (provider !== 'local') throw new Error('Remote jobs always use a fresh hash.');
     if (controller.isPlayActive()) throw new Error('Suspend the active game before clearing hash.');
+    invalidateInitialization();
     await controller.use(null);
     setDescriptor(null);
     await ensureReady();
@@ -346,7 +418,7 @@ export function EngineProvider({ children }: { children: ReactNode }) {
     setInstallPrompt(null);
     return result.outcome === 'accepted';
   };
-  const value: EngineContextValue = { controller, descriptor, settings, setSettings, limit, setLimit, provider, status, ensureReady,
+  const value: EngineContextValue = { controller, descriptor, settings, setSettings, limit, setLimit, provider, status, initializing, ensureReady,
     profile, setProfile, installed, offlineReady, storageAvailable, progress, download, cancelDownload, remove, runOnline, onlineConsent,
     refreshInstallations, clearHash, testRemote, connectRemote, disconnectRemote, remoteEndpoint, remoteEngineId, remoteEngines, remoteLimits: remoteAdapter?.caps ?? null, updateAvailable, applyUpdate, install, installAvailable: !!installPrompt };
   return <Context.Provider value={value}>{children}</Context.Provider>;

@@ -7,6 +7,8 @@ const sw = self as unknown as ServiceWorkerGlobalScope;
 // @ts-ignore Workbox replaces this exact global expression at build time.
 precacheAndRoute(self.__WB_MANIFEST);
 registerRoute(new NavigationRoute(createHandlerBoundToURL('/index.html'), { denylist: [/^\/engines\//, /^\/v1\//, /^\/healthz$/] }));
+// Claim the first page after installation; updates still wait for SKIP_WAITING.
+sw.addEventListener('activate', event => { event.waitUntil(sw.clients.claim()); });
 
 const pending = new Map<EngineProfile, AbortController>();
 const validProfile = (name: unknown): name is EngineProfile => typeof name === 'string' && Object.hasOwn(profiles, name);

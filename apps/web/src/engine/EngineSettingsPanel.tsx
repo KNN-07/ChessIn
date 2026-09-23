@@ -92,10 +92,10 @@ export function EngineSettingsPanel() {
           })}
         </div>
         {!canThread() && <p className="settings-help">Threaded engines need cross-origin isolation and SharedArrayBuffer. Single-thread engines remain available.</p>}
-        <div className={`engine-storage-state ${engine.offlineReady ? 'ready' : ''}`}><span className="storage-state-dot" /><div><strong>{engine.offlineReady ? 'Ready offline' : installed ? 'One reload away' : 'Download to get started'}</strong><span>{engine.offlineReady ? 'App shell and complete engine pair verified.' : installed ? 'Reload to enable the installed engine offline.' : 'A one-time download. No account or server required.'}</span></div><span className="storage-total">{installedMb.toFixed(1)} MB stored</span></div>
+        <div className={`engine-storage-state ${engine.offlineReady ? 'ready' : ''}`}><span className="storage-state-dot" /><div><strong>{engine.offlineReady ? 'Ready offline' : installed ? 'Preparing offline access' : 'Download to get started'}</strong><span>{engine.offlineReady ? 'App and engine verified. Initialization is automatic.' : installed ? 'Connecting the installed engine to this app. No reload needed.' : 'A one-time download, then the engine starts automatically.'}</span></div><span className="storage-total">{installedMb.toFixed(1)} MB stored</span></div>
         <div className="engine-actions">
           {!installed && <button className="engine-button primary-button" disabled={busy || !!engine.progress} onClick={() => void action(() => engine.download(selectedProfile))}>{engine.progress ? 'Downloading…' : `Download engine · ${(profileSize(selectedProfile) / 1e6).toFixed(1)} MB`}</button>}
-          <button className={`engine-button ${installed ? 'primary-button' : ''}`} disabled={busy || engine.provider !== 'local'} onClick={() => void action(() => engine.ensureReady())}>Initialize selected engine</button>
+          {!engine.descriptor && (installed || engine.onlineConsent) && <button className="engine-button" disabled={busy || engine.initializing || engine.provider !== 'local'} onClick={() => void action(() => engine.ensureReady())}>{engine.initializing ? 'Starting engine…' : 'Retry initialization'}</button>}
           {engine.progress?.profile === selectedProfile && <button className="engine-button" onClick={() => void action(() => engine.cancelDownload(selectedProfile))}>Cancel download</button>}
         </div>
         {engine.progress && <label className="engine-download-progress">Downloading {engine.progress.file ?? 'engine'} · {Math.round(engine.progress.loaded / engine.progress.total * 100)}%<progress max={engine.progress.total} value={engine.progress.loaded} /></label>}
@@ -108,7 +108,7 @@ export function EngineSettingsPanel() {
       </>}
       {section === 'search' && <>
         <div className="settings-section-heading"><div><h2>Search preferences</h2><p>Balance analysis depth with time and device resources.</p></div></div>
-        {!engine.descriptor && <div className="settings-notice"><p>Initialize or connect an engine to reveal its supported memory, thread and line controls.</p><button className="engine-button" onClick={() => setSection(engine.provider === 'local' ? 'engine' : 'connection')}>Set up engine</button></div>}
+        {!engine.descriptor && <div className="settings-notice"><p>Download a local engine or connect a remote engine to reveal its supported memory, thread and line controls. Downloaded local engines start automatically.</p><button className="engine-button" onClick={() => setSection(engine.provider === 'local' ? 'engine' : 'connection')}>Set up engine</button></div>}
         {engine.descriptor && <div className="engine-fields">
           {field('Threads', 'threads', 1, engine.provider === 'local' ? selectedProfile.endsWith('threaded') ? Math.min(8, navigator.hardwareConcurrency ?? 1) : 1 : Math.min(8, engine.remoteLimits?.maxThreads ?? 8), 'Threads', 'CPU threads')}
           {field('Hash', 'hashMb', 16, Math.min(256, engine.remoteLimits?.maxHashMb ?? 256), 'Hash memory', 'MiB')}
