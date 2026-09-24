@@ -29,7 +29,9 @@ function snapshotsFor(request: AnalysisRequest, expectedPv: number, search: Revi
         if (!atDepth) { atDepth = new Map(); pending.set(event.depth, atDepth) }
         atDepth.set(event.multiPv, candidate)
         if (atDepth.size === expectedPv && Array.from({ length: expectedPv }, (_, i) => atDepth!.has(i + 1)).every(Boolean)) {
-          completed.set(event.depth, { depth: event.depth, candidates: Array.from({ length: expectedPv }, (_, i) => atDepth!.get(i + 1)!) })
+          const candidates = Array.from({ length: expectedPv }, (_, i) => atDepth!.get(i + 1)!)
+          // Aspiration-window bounds must not replace an already completed exact iteration.
+          if (candidates.every(candidate => !candidate.score.bound)) completed.set(event.depth, { depth: event.depth, candidates })
         }
       }
       if (event.type === 'bestmove') bestmove = true
@@ -83,16 +85,17 @@ export async function runReview(game: GameDocument, report: ReviewReport, search
     const requestedPv = Math.min(signature.settings.multiPv ?? 1, legalMoves.length)
     const bestRequest: AnalysisRequest = { requestId: crypto.randomUUID(), engineId: signature.engineId, position, settings: { ...settings, ...(signature.settings.multiPv === undefined ? {} : { multiPv: requestedPv }) }, limit }
     const best = await snapshotsFor(bestRequest, requestedPv, search, signal)
-    const playedIsCandidate = best.some(snapshot => snapshot.candidates.some(candidate => candidate.move === node.uci && !candidate.score.bound))
-    let played: DepthSnapshot[] | undefined
-    if (!terminal && !playedIsCandidate) {
+    let assessment = classifyMove({ game, nodeId: id, bestSnapshots: best, terminal })
+    // An appearance in an early iteration is not evidence for the deeper best-move score.
+    if (!terminal && (!assessment.played || assessment.actualDepth < (assessment.bestDepth ?? 0))) {
       const playedRequest: AnalysisRequest = {
         ...bestRequest, requestId: crypto.randomUUID(), settings: { ...settings, ...(signature.settings.multiPv === undefined ? {} : { multiPv: 1 }) }, searchMoves: [node.uci!],
       }
-      played = await snapshotsFor(playedRequest, 1, search, signal)
+      const played = await snapshotsFor(playedRequest, 1, search, signal)
+      assessment = classifyMove({ game, nodeId: id, bestSnapshots: best, playedSnapshots: played, terminal })
     }
     if (signal.aborted) throw new ReviewInterrupted()
-    current = { ...current, moves: { ...current.moves, [id]: classifyMove({ game, nodeId: id, bestSnapshots: best, playedSnapshots: played, terminal }) } }
+    current = { ...current, moves: { ...current.moves, [id]: assessment } }
     await onProgress(current)
   }
   const completed: ReviewReport = { ...current, status: 'completed' }

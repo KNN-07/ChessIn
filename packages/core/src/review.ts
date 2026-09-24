@@ -2,7 +2,7 @@ import { Chess } from 'chess.js'
 import type { EngineScore, EngineSettings, PositionSpec } from './engine.js'
 import { getPosition, reconstruct, type GameDocument } from './game.js'
 
-export const REVIEW_ALGORITHM_VERSION = 'chessin-review-v1' as const
+export const REVIEW_ALGORITHM_VERSION = 'chessin-review-v3' as const
 export type ReviewLabel = 'Forced' | 'Brilliant' | 'Great' | 'Best' | 'Excellent' | 'Good' | 'Inaccuracy' | 'Mistake' | 'Blunder' | 'Uncertain'
 export type Candidate = { move: string; score: EngineScore; pv: string[] }
 export type DepthSnapshot = { depth: number; candidates: Candidate[] }
@@ -199,7 +199,7 @@ export function classifyMove(input: {
   result.lossCp = loss
   const top = best.move === node.uci
   const safe = played.score.kind === 'mate' ? played.score.value > 0 : played.score.value >= -50
-  const sacrifice = top && loss <= 10 && common >= 14 && safe && isEngineBackedSacrifice(positions, node.uci, best.pv)
+  const sacrifice = loss <= 50 && common >= 12 && safe && isEngineBackedSacrifice(positions, node.uci, played.pv)
   const runnerLoss = result.runnerUp ? moverLoss(best.score, result.runnerUp.score) : undefined
   if (sacrifice) result.label = 'Brilliant'
   else if (top && loss <= 10 && common >= 14 && runnerLoss !== undefined && runnerLoss >= 150) result.label = 'Great'
@@ -211,7 +211,7 @@ export function classifyMove(input: {
   else result.label = 'Blunder'
   const versus = result.bestSan[0] && !top ? ` versus ${result.bestSan[0]}` : ''
   const mateTransition = loss === 1000 && (best.score.kind === 'mate' || played.score.kind === 'mate')
-  result.explanation = sacrifice ? 'Preserves the engine’s best continuation with an engine-backed sacrifice heuristic.'
+  result.explanation = sacrifice ? `Engine-backed piece sacrifice within ${(loss / 100).toFixed(2)} pawns of the best move${versus}.`
     : mateTransition ? `${best.score.kind === 'mate' && best.score.value > 0 ? 'Lost a forced mate' : 'Allowed a forced mate'}${versus}.`
     : outcome === 'checkmate' ? 'Checkmate; the position is decided by chess rules.'
     : outcome ? `${outcome === 'stalemate' ? 'Stalemate' : 'Draw'} by chess rules; ${loss ? `lost ${(loss / 100).toFixed(1)} pawns${versus}` : 'no measurable loss'}.`

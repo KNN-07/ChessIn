@@ -60,13 +60,13 @@
 .review-counts thead th { border-top: 0; color: #aeb8a8; font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; }
 .review-counts th { text-align: center; font-weight: 600; }
 .review-counts td { text-align: center; width: 23%; }
-.review-label { display: inline-flex; align-items: baseline; gap: 5px; white-space: nowrap; color: #dce4d5; font-size: .78rem; }
-.review-label > span { font-weight: 800; min-width: 17px; }
-.review-label.review-brilliant { color: #28b8bd; }
-.review-label.review-great { color: #6b9fe8; }
-.review-label.review-inaccuracy { color: #e5b24a; }
-.review-label.review-mistake { color: #e48742; }
-.review-label.review-blunder { color: #dc5c5c; }
+.review-label { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; color: #dce4d5; font-size: .78rem; }
+.review-label.review-brilliant { color: #63c9bd; }
+.review-label.review-great { color: #90b5da; }
+.review-label.review-best, .review-label.review-excellent { color: #a9ce79; }
+.review-label.review-inaccuracy { color: #f7c045; }
+.review-label.review-mistake { color: #ffa459; }
+.review-label.review-blunder { color: #fa584f; }
 .review-label.review-uncertain, .review-label.review-pending { color: #aeb8a8; }
 .review-graph > svg { display: block; width: 100%; max-height: 185px; overflow: visible; }
 .review-graph [role="button"] { cursor: pointer; }
@@ -102,4 +102,4 @@
 .review-moves li > button.selected { box-shadow: inset 0 0 0 2px #8fbd57; background: #293328; }
 .review-moves li > button > span { overflow-wrap: anywhere; }
 .review-moves li > small { padding: 0 11px 11px; font-size: .72rem; }
-@media (max-width: 370px) { .review-run, .review-counts, .review-graph, .review-critical, .review-quality-card { padding: 11px; } .review-quality { gap: 6px; } .review-quality-card { gap: 5px; } .review-quality-card small { font-size: .69rem; } .review-counts th, .review-counts td { padding: 7px 2px; font-size: .75rem; } .review-label { font-size: .72rem; gap: 3px; } .review-label > span { min-width: 13px; } }
+@media (max-width: 370px) { .review-run, .review-counts, .review-graph, .review-critical, .review-quality-card { padding: 11px; } .review-quality { gap: 6px; } .review-quality-card { gap: 5px; } .review-quality-card small { font-size: .69rem; } .review-counts th, .review-counts td { padding: 7px 2px; font-size: .75rem; } .review-label { font-size: .72rem; gap: 3px; } }

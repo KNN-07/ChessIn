@@ -45,6 +45,45 @@ describe('sequential review searches', () => {
     expect(progress).toHaveLength(2)
   })
 
+  it.each([6, 10])('searches the played move when it drops out after depth %i', async shallowDepth => {
+    const game = appendMove(createGame(), 'e4')
+    const signature = reviewSignature(game, { id: 'sf', name: 'Stockfish', buildVersion: '19' }, 'local', { strength: { kind: 'full' }, multiPv: 2 }, 16, 3000)
+    const search: ReviewSearch = async function* (request) {
+      const id = request.requestId
+      if (request.searchMoves) {
+        yield info(id, 12, 1, -200, 'e2e4')
+      } else {
+        yield info(id, shallowDepth, 1, 30, 'e2e4')
+        yield info(id, shallowDepth, 2, 20, 'd2d4')
+        yield info(id, 12, 1, 250, 'd2d4')
+        yield info(id, 12, 2, 100, 'g1f3')
+      }
+      yield { type: 'bestmove', requestId: id, move: request.searchMoves?.[0] ?? 'd2d4' }
+      yield { type: 'done', requestId: id, reason: 'completed' }
+    }
+    const result = await runReview(game, prepareReview(game, signature), search, new AbortController().signal, () => {})
+    expect(result.moves[game.currentId]).toMatchObject({ label: 'Blunder', actualDepth: 12, lossCp: 450 })
+  })
+
+  it.each([true, false])('preserves exact evidence through bounded updates (prior exact: %s)', async priorExact => {
+    const game = appendMove(createGame(), 'e4')
+    const signature = reviewSignature(game, { id: 'sf', name: 'Stockfish', buildVersion: '19' }, 'local', { strength: { kind: 'full' }, multiPv: 1 }, 12, 3000)
+    const search: ReviewSearch = async function* (request) {
+      const id = request.requestId
+      if (priorExact) yield info(id, 12, 1, 30, 'e2e4')
+      yield { type: 'info', requestId: id, depth: 12, multiPv: 1, score: { kind: 'cp', value: 80, bound: 'lower' }, pv: ['e2e4'] }
+      yield { type: 'bestmove', requestId: id, move: 'e2e4' }
+      yield { type: 'done', requestId: id, reason: 'completed' }
+    }
+    const result = await runReview(game, prepareReview(game, signature), search, new AbortController().signal, () => {})
+    if (priorExact) {
+      expect(result.moves[game.currentId]).toMatchObject({ label: 'Best', actualDepth: 12, whiteScore: { kind: 'cp', value: 30 }, lossCp: 0 })
+    } else {
+      expect(result.moves[game.currentId].label).toBe('Uncertain')
+      expect(result.moves[game.currentId].lossCp).toBeUndefined()
+    }
+  })
+
   it('avoids a restricted search when the played move immediately ends the game', async () => {
     let game = createGame()
     for (const move of ['f3', 'e5', 'g4', 'Qh4#']) game = appendMove(game, move)

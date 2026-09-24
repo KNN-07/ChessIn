@@ -48,16 +48,8 @@
 .analysis-layout .move-chip.selected { background: #8fbd5727; border-color: #8fbd5759; }
 .notation-san { white-space: nowrap; }
 .notation-score { display: none; }
-.move-quality-mark { --quality: #67745c; display: inline-grid; place-items: center; border-radius: 50%; background: var(--quality); color: white; font-weight: 800; width: 19px; min-width: 19px; height: 19px; font-size: 11px; }
 .move-chip .move-quality-mark { order: -1; }
-.coach-card .move-quality-mark { width: 25px; height: 25px; font-size: 15px; }
-.quality-brilliant { --quality: #169ba0; }
-.quality-great { --quality: #477bb4; }
-.quality-best, .quality-excellent { --quality: #729847; }
-.quality-good { --quality: #788b56; }
-.quality-inaccuracy { --quality: #b28624; }
-.quality-mistake { --quality: #c46f2c; }
-.quality-blunder { --quality: #bf4848; }
+.coach-card .move-quality-mark { width: 28px; height: 28px; }
 .move-chip:has(.quality-brilliant) { color: #63c9bd; }
 .move-chip:has(.quality-great) { color: #90b5da; }
 .move-chip:has(.quality-best) { color: #a9ce79; }

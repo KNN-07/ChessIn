@@ -8,7 +8,7 @@ import { AnalysisBoard } from '../../components/AnalysisBoard'
 import { ChessPlayerRow } from '../../components/ChessPlayerRow'
 import { useEngine } from '../../engine/EngineContext'
 import { mainlineNodes, reviewSummary, type ReviewMove } from '@chessin/core/review'
-import { moveSymbols } from '../../components/move-quality'
+import { MoveQualityBadge } from '../../components/MoveQualityBadge'
 import { QuickEngineSettings } from '../../engine/QuickEngineSettings'
 import './analysis.css'
 
@@ -234,7 +234,7 @@ export function AnalysisPage({ game, onChange, onOpenSettings, reviewPanel, grad
       <button className={`move-chip ${game.currentId === node.id ? 'selected' : ''}`} onClick={() => go(node.id)}
         aria-current={game.currentId === node.id ? 'step' : undefined} aria-label={`${node.san}${grade ? ` · ${grade.label}` : ''}`} title={node.comments.join(' · ') || node.san || ''}>
         <span className="notation-san">{node.san?.replace(/^[KQRBN]/, piece => ({ K: '♚', Q: '♛', R: '♜', B: '♝', N: '♞' })[piece]! + ' ')}</span>
-        {grade ? <span className={`move-quality-mark quality-${grade.label.toLowerCase()}`} title={grade.label} aria-hidden="true">{moveSymbols[grade.label]}</span> : node.nags.length > 0 && <span className="move-nags">{node.nags.map(nag => `$${nag}`).join(' ')}</span>}
+        {grade ? <MoveQualityBadge label={grade.label} decorative /> : node.nags.length > 0 && <span className="move-nags">{node.nags.map(nag => `$${nag}`).join(' ')}</span>}
         {grade?.whiteScore && <span className="notation-score" aria-label={`White evaluation ${scoreLabel(grade.whiteScore)}`}>{scoreLabel(grade.whiteScore)}</span>}
       </button>
       <details className="notation-options"><summary aria-label={`Options for ${node.san}`} title={`Options for ${node.san}`}><FontAwesomeIcon icon={faEllipsis} /></summary><div>
@@ -284,7 +284,7 @@ export function AnalysisPage({ game, onChange, onOpenSettings, reviewPanel, grad
           <div className="eval-light" style={{ height: `${evalPercentage}%` }} /><span>{displayText}</span>
         </div>
         <div className="annotated-board"><AnalysisBoard game={game} onMove={move} orientation={orientation} arrows={arrow} />
-          {assessment && destination && <span className={`board-quality-badge move-quality-mark quality-${assessment.label.toLowerCase()}`} title={assessment.label} style={{ left: `${((orientation === 'white' ? badgeFile : 7 - badgeFile) + .88) * 12.5}%`, top: `${((orientation === 'white' ? 7 - badgeRank : badgeRank) + .05) * 12.5}%` }}>{moveSymbols[assessment.label]}</span>}
+          {assessment && destination && <MoveQualityBadge label={assessment.label} className="board-quality-badge" style={{ left: `${((orientation === 'white' ? badgeFile : 7 - badgeFile) + .88) * 12.5}%`, top: `${((orientation === 'white' ? 7 - badgeRank : badgeRank) + .05) * 12.5}%` }} />}
         </div>
       </div>
       <ChessPlayerRow name={bottomName} side={orientation} rating={game.headers[orientation === 'white' ? 'WhiteElo' : 'BlackElo']} detail={<span className="material">{bottomCaptures}{bottomAdvantage > 0 ? ` +${bottomAdvantage}` : ''}</span>} clock={clocks[orientation === 'white' ? 'w' : 'b']} active={chess.turn() === (orientation === 'white' ? 'w' : 'b')} />
@@ -293,7 +293,7 @@ export function AnalysisPage({ game, onChange, onOpenSettings, reviewPanel, grad
       <header className="pane-heading chess-panel-heading"><div className="analysis-heading-copy"><span className="eyebrow">ANALYSIS ROOM</span><h1 title={game.title}>{game.title}</h1><span className="engine-identity"><FontAwesomeIcon icon={faMicrochip} /> {engine.provider === 'remote' ? 'Remote' : 'Local'} · {engine.descriptor?.name || 'Engine not initialized'}</span></div><button onClick={() => setOrientation(orientation === 'white' ? 'black' : 'white')} aria-label="Flip board" title="Flip board"><FontAwesomeIcon icon={faRotate} /></button><button onClick={onOpenSettings} aria-label="Engine settings" title="Engine settings"><FontAwesomeIcon icon={faGear} /></button></header>
       <div className="coach-section">
         <article className="coach-card" aria-label="Selected move feedback">
-          <header><span className={`move-quality-mark quality-${assessment?.label.toLowerCase() ?? 'unreviewed'}`}>{assessment ? moveSymbols[assessment.label] : <FontAwesomeIcon icon={faChessPawn} />}</span><strong>{assessment?.label ?? (current.san ? 'Your move' : 'Welcome')}</strong><span className="coach-score">{displayText}</span></header>
+          <header>{assessment ? <MoveQualityBadge label={assessment.label} decorative /> : <span className="move-quality-mark quality-unreviewed" aria-hidden="true"><FontAwesomeIcon icon={faChessPawn} /></span>}<strong>{assessment?.label ?? (current.san ? 'Your move' : 'Welcome')}</strong><span className="coach-score">{displayText}</span></header>
           <p>{assessment?.explanation ?? (current.san ? 'Review this game to discover your best moves and learn from the critical moments.' : 'Make a move or import a game to start exploring. Your move-by-move feedback will appear here.')}</p>
           {showHint && <p className="coach-hint">{assessment?.bestSan?.length ? `Best continuation: ${assessment.bestSan.join(' ')}` : 'Open the Engine tab and analyze this position to find the best continuation.'}</p>}
           <small>{moveCaption}{assessment?.actualDepth ? ` · depth ${assessment.actualDepth}` : ''}</small>

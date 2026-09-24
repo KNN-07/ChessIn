@@ -4,6 +4,8 @@ import { classifyMove, isEngineBackedSacrifice, matchesReview, moverLoss, review
 
 const sacrificeFen = '5r1k/6pp/7N/8/8/1Q6/8/6K1 w - - 0 1'
 const sacrificePv = ['b3g8', 'f8g8', 'h6f7']
+const greekGiftFen = 'rnbq1rk1/ppp2ppp/3bpn2/3pP3/3P4/3B1N2/PPP2PPP/RNBQ1RK1 w - - 0 1'
+const greekGiftPv = ['d3h7', 'g8h7', 'f3g5']
 
 function candidate(move: string, value: number, depth: number, pv = [move]): DepthSnapshot {
   return { depth, candidates: [{ move, score: { kind: 'cp', value }, pv }] }
@@ -27,6 +29,44 @@ describe('review classification', () => {
     const shallow = classifyMove({ game, nodeId: game.currentId, bestSnapshots: [snapshot(9)] })
     expect(shallow.label).toBe('Uncertain')
     expect(shallow.lossCp).toBeUndefined()
+  })
+
+  it.each([
+    { depth: 11, loss: 0, score: 0, top: true, label: 'Best' },
+    { depth: 12, loss: 0, score: 0, top: true, label: 'Brilliant' },
+    { depth: 12, loss: 50, score: 0, top: false, label: 'Brilliant' },
+    { depth: 12, loss: 51, score: 0, top: false, label: 'Good' },
+    { depth: 12, loss: 50, score: -50, top: false, label: 'Brilliant' },
+    { depth: 12, loss: 50, score: -51, top: false, label: 'Good' },
+  ])('grades a sacrifice at depth $depth, loss $loss, score $score, top $top as $label', ({ depth, loss, score, top, label }) => {
+    const game = appendMove(createGame(greekGiftFen), 'd3h7')
+    const played = candidate('d3h7', score, depth, greekGiftPv)
+    const result = classifyMove({ game, nodeId: game.currentId,
+      bestSnapshots: [top ? played : candidate('f3g5', score + loss, depth)],
+      playedSnapshots: [played],
+    })
+    expect(result.label).toBe(label)
+    expect(result.lossCp).toBe(loss)
+  })
+
+  it.each([
+    { pv: ['d3h7', 'g8h7'], label: 'Good' },
+    { pv: ['d3h7', 'g8h7', 'f3f5'], label: 'Uncertain' },
+    { pv: [], label: 'Uncertain' },
+  ])('requires a legal sacrifice follow-up in the played continuation: $pv', ({ pv, label }) => {
+    const game = appendMove(createGame(greekGiftFen), 'd3h7')
+    expect(classifyMove({ game, nodeId: game.currentId,
+      bestSnapshots: [candidate('f3g5', 50, 12)],
+      playedSnapshots: [candidate('d3h7', 0, 12, pv)],
+    }).label).toBe(label)
+  })
+
+  it('does not transfer a best-move sacrifice to a different near-best move', () => {
+    const game = appendMove(createGame(greekGiftFen), 'f3g5')
+    expect(classifyMove({ game, nodeId: game.currentId,
+      bestSnapshots: [candidate('d3h7', 50, 12, greekGiftPv)],
+      playedSnapshots: [candidate('f3g5', 0, 12)],
+    }).label).toBe('Good')
   })
 
   it('assigns mover-relative 400cp loss to both colors and flips display scores only once', () => {
@@ -60,7 +100,6 @@ describe('review classification', () => {
     expect(bounded.bestDepth).toBe(16)
     const unequal = classifyMove({ game, nodeId: game.currentId, bestSnapshots: [candidate('d2d4', 200, 16)], playedSnapshots: [candidate('e2e4', -300, 14)] })
     expect(unequal.label).toBe('Uncertain')
-    expect(unequal.explanation).toMatch(/common completed exact depth/)
     const forced = classifyMove({ game, nodeId: game.currentId, bestSnapshots: [], forced: true })
     expect(forced.label).toBe('Forced')
     expect(forced.lossCp).toBeUndefined()
@@ -78,6 +117,9 @@ describe('review classification', () => {
     expect(matchesReview(report, reviewSignature(navigated, descriptor, 'local', settings, 16, 3000))).toBe(true)
     expect(matchesReview(report, reviewSignature(appendMove(navigated, 'd4', game.rootId), descriptor, 'local', settings, 16, 3000))).toBe(false)
     expect(matchesReview(report, reviewSignature(game, descriptor, 'local', settings, 18, 3000))).toBe(false)
+    const oldReport: ReviewReport = JSON.parse(JSON.stringify(report))
+    Object.assign(oldReport.signature, { algorithmVersion: 'chessin-review-v1' })
+    expect(matchesReview(oldReport, original)).toBe(false)
   })
 
   it('honors mate transitions rather than fabricating centipawn conversions', () => {
