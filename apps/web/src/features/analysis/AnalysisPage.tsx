@@ -10,7 +10,6 @@ import { useEngine } from '../../engine/EngineContext'
 import { mainlineNodes, reviewSummary, type ReviewMove } from '@chessin/core/review'
 import { detectOpening, moveCommentary } from '@chessin/core/opening'
 import { MoveQualityBadge } from '../../components/MoveQualityBadge'
-import { QuickEngineSettings } from '../../engine/QuickEngineSettings'
 import './analysis.css'
 
 export interface AnalysisPageProps {
@@ -160,7 +159,7 @@ export function AnalysisPage({ game, onChange, onOpenSettings, reviewPanel, grad
   }
   useEffect(() => {
     const keys = (event: KeyboardEvent) => {
-      if (event.altKey || event.ctrlKey || event.metaKey || event.target instanceof HTMLElement && (event.target.closest('input,textarea,select,[contenteditable="true"],button') || event.target.isContentEditable)) return
+      if (event.altKey || event.ctrlKey || event.metaKey || event.target instanceof HTMLElement && (event.target.closest('dialog,input,textarea,select,[contenteditable="true"],button') || event.target.isContentEditable)) return
       const node = game.nodes[game.currentId]
       const next = event.key === 'ArrowLeft' ? node.parentId : event.key === 'ArrowRight' ? node.childIds[0] : event.key === 'Home' ? game.rootId : event.key === 'End' ? endNode() : null
       if (next) { event.preventDefault(); onChange(selectNode(game, next)) }
@@ -283,7 +282,7 @@ export function AnalysisPage({ game, onChange, onOpenSettings, reviewPanel, grad
     </div>
     <aside className="analysis-pane chess-panel">
       <header className="pane-heading chess-panel-heading"><div className="analysis-heading-copy"><span className="eyebrow">ANALYSIS ROOM</span><h1 title={game.title}>{game.title}</h1><span className="engine-identity"><FontAwesomeIcon icon={faMicrochip} /> {engine.provider === 'remote' ? 'Remote' : 'Local'} · {engine.descriptor?.name || 'Engine not initialized'}</span></div><button onClick={() => setOrientation(orientation === 'white' ? 'black' : 'white')} aria-label="Flip board" title="Flip board"><FontAwesomeIcon icon={faRotate} /></button><button onClick={onOpenSettings} aria-label="Engine settings" title="Engine settings"><FontAwesomeIcon icon={faGear} /></button></header>
-      <QuickEngineSettings disabled={reviewRunning} onOpenSettings={onOpenSettings} />
+      <button type="button" className="analysis-engine-settings" onClick={onOpenSettings} aria-haspopup="dialog"><FontAwesomeIcon icon={faGear} /> Engine settings</button>
       <div className="opening-banner" aria-label="Detected opening"><span className="eyebrow">OPENING{opening ? ` · ${opening.eco}` : ''}</span><strong>{opening?.name ?? (current.parentId ? 'Unrecognized opening' : 'Starting position')}</strong></div>
       <div className="coach-section">
         <article className="coach-card" aria-label="Selected move feedback">

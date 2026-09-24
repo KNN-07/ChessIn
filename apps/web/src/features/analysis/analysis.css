@@ -111,9 +111,7 @@
 .pv-line { display: grid; grid-template-columns: 18px 58px 1fr; gap: 8px; padding: 10px 0; font-size: 12px; line-height: 1.6; }
 .pv-score { display: flex; flex-direction: column; }
 .pv-score small, .analysis-engine-status { color: var(--muted); font-size: 11px; }
-.analysis-layout .quick-engine-rail { position: static; width: auto; background: transparent; border: 0; margin: 0 18px 12px; }
-.analysis-layout .quick-engine-tab { writing-mode: horizontal-tb; width: 100%; padding: 9px 12px; border: 1px solid var(--line); border-radius: 6px; justify-content: flex-start; }
-.analysis-layout .quick-engine-drawer { position: static; width: 100%; max-height: none; margin-top: 8px; box-shadow: none; }
+.analysis-engine-settings { display: flex; align-items: center; gap: 8px; margin: 0 18px 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); font: inherit; font-size: 12px; text-align: left; }
 @media (max-width: 420px) {
   .analysis-layout .evaluation-bar { width: 24px; min-width: 24px; }
   .analysis-layout .board-and-eval { gap: 7px; }
