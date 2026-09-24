@@ -53,7 +53,7 @@ export function QuickEngineSettings({ disabled, onOpenSettings }: { disabled: bo
         </>}
         {multiPv?.type === 'spin' && maxLines >= minLines && <label>Engine lines<select value={engine.settings.multiPv ?? minLines} disabled={minLines === maxLines} onChange={event => engine.setSettings({ ...engine.settings, multiPv: Number(event.target.value) })}>{Array.from({ length: maxLines - minLines + 1 }, (_, index) => minLines + index).map(count => <option key={count} value={count}>{count} {count === 1 ? 'line' : 'lines'}</option>)}</select></label>}
       </fieldset>
-      <p className="quick-engine-note">{disabled ? 'Review has its own search settings. Switch to Moves or Engine to change analysis preferences.' : engine.limit.kind === 'infinite' ? 'Continuous analysis uses more CPU and battery. Stop it from the board.' : 'Changes apply to the next search, or restart analysis if it is running.'}</p>
+      <p className="quick-engine-note">{disabled ? 'Game analysis is running. Pause it to change analysis preferences.' : engine.limit.kind === 'infinite' ? 'Continuous analysis uses more CPU and battery. Stop it from the board.' : 'Changes apply to the next search, or restart analysis if it is running.'}</p>
       <footer><p>Downloads, hardware and connections live in Settings—not on your board.</p><button onClick={onOpenSettings}>Open full Settings <FontAwesomeIcon icon={faArrowRight} /></button></footer>
     </section>}
   </aside>

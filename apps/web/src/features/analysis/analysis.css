@@ -14,6 +14,10 @@
 .analysis-layout .engine-identity { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 10px; }
 .analysis-layout .pane-heading button { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 7px; color: var(--muted); font-size: 13px; }
 .coach-section { padding: 0 18px; }
+.opening-banner { display: grid; gap: 5px; margin: 0 18px 12px; padding: 10px 12px; border-left: 3px solid var(--green); background: #8fbd570a; }
+.opening-banner strong { font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.coach-annotation, .coach-card .coach-assessment { border-top: 1px solid var(--line); padding-top: 9px; }
+.coach-card .coach-assessment { color: var(--ink); }
 .coach-card { min-width: 0; background: #1c201a; color: var(--ink); border: 1px solid var(--line); border-radius: 9px; padding: 14px; }
 .coach-card header { display: flex; align-items: center; gap: 8px; }
 .coach-card header strong { font-size: 14px; }
@@ -23,7 +27,6 @@
 .coach-card .coach-hint { border-top: 1px solid var(--line); padding-top: 9px; color: #c5d6b5; }
 .coach-actions { display: flex; gap: 8px; padding: 9px 18px 13px; }
 .coach-actions button { display: flex; align-items: center; justify-content: center; gap: 7px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--muted); padding: 8px 12px; font-size: 11px; font-weight: 650; }
-.coach-actions button:last-child { margin-left: auto; background: #8fbd5716; border-color: #8fbd5745; color: var(--green); }
 .coach-actions button[aria-pressed="true"] { color: var(--green); border-color: #8fbd5770; }
 .analysis-layout button:disabled { opacity: .35; cursor: default; }
 .analysis-layout button:focus-visible, .analysis-layout summary:focus-visible, .review-timeline g:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; }
@@ -31,6 +34,10 @@
 .analysis-layout .analysis-score-strip > div:first-child { display: flex; gap: 4px; flex-direction: column; }
 .analysis-layout .analysis-score-strip strong { font-size: 23px; line-height: 1; font-variant-numeric: tabular-nums; }
 .score-perspective { font-size: 8px; letter-spacing: 1px; color: var(--muted); }
+.analysis-review-control { margin: 0 18px 12px; }
+.analysis-live-engine { margin: 0 18px 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+.analysis-live-engine > summary { cursor: pointer; font-size: 11px; color: var(--muted); }
+.analysis-layout .analysis-live-engine .analysis-score-strip { margin: 12px 0; }
 .score-search-info { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; font-size: 10px; color: var(--muted); text-align: right; }
 .score-search-info button { background: #8fbd5716; color: var(--green); border: 1px solid #8fbd5745; border-radius: 6px; padding: 6px 9px; font-size: 11px; white-space: nowrap; }
 .analysis-layout .is-searching { border-color: #8fbd5770; }
@@ -104,12 +111,9 @@
 .pv-line { display: grid; grid-template-columns: 18px 58px 1fr; gap: 8px; padding: 10px 0; font-size: 12px; line-height: 1.6; }
 .pv-score { display: flex; flex-direction: column; }
 .pv-score small, .analysis-engine-status { color: var(--muted); font-size: 11px; }
-.analysis-layout .quick-engine-rail { position: static; width: auto; background: transparent; border: 0; margin-top: 12px; }
-.analysis-layout .quick-engine-tab { writing-mode: horizontal-tb; padding: 12px 0; border: 0; }
-.analysis-layout .quick-engine-drawer { position: fixed; top: 68px; right: 0; bottom: 0; width: min(320px, 100vw); z-index: 20; }
-@media (max-width: 719px) {
-  .analysis-layout .quick-engine-drawer { top: 53px; bottom: 65px; }
-}
+.analysis-layout .quick-engine-rail { position: static; width: auto; background: transparent; border: 0; margin: 0 18px 12px; }
+.analysis-layout .quick-engine-tab { writing-mode: horizontal-tb; width: 100%; padding: 9px 12px; border: 1px solid var(--line); border-radius: 6px; justify-content: flex-start; }
+.analysis-layout .quick-engine-drawer { position: static; width: 100%; max-height: none; margin-top: 8px; box-shadow: none; }
 @media (max-width: 420px) {
   .analysis-layout .evaluation-bar { width: 24px; min-width: 24px; }
   .analysis-layout .board-and-eval { gap: 7px; }

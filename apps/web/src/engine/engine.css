@@ -5,7 +5,7 @@
 .settings-local-note { flex: none; padding-bottom: 3px; font-size: 12px; color: var(--muted); }
 .engine-settings { container-type: inline-size; min-width: 0; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 16px; font-size: 13px; line-height: 1.55; box-shadow: 0 12px 40px #00000012; }
 .engine-settings p { margin: 0; }
-.engine-settings .settings-overview { display: flex; align-items: center; gap: 13px; padding: 24px 28px; background: linear-gradient(110deg, #303a2b80, transparent 75%); border-radius: 16px 16px 0 0; }
+.engine-settings .settings-overview { display: flex; align-items: center; gap: 13px; padding: 24px 28px; background: #2b3227; border-radius: 16px 16px 0 0; }
 .settings-engine-icon { flex: none; display: grid; place-items: center; width: 42px; height: 42px; color: var(--green); background: #8fbd5712; border: 1px solid #8fbd572a; border-radius: 11px; font-size: 20px; }
 .settings-engine-identity { display: grid; gap: 3px; min-width: 0; }
 .settings-kicker { font-size: 9px; font-weight: 750; letter-spacing: .16em; color: #a5b69a; }
@@ -26,7 +26,7 @@
 .engine-profile-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .engine-settings .engine-profile { display: flex; align-items: start; gap: 11px; min-width: 0; padding: 18px 16px; border: 1px solid #444b3e; border-radius: 10px; background: #1c211a70; cursor: pointer; transition: border-color .15s, background .15s; }
 .engine-settings .engine-profile:hover { border-color: #71845e; background: #2b3426; }
-.engine-settings .engine-profile.selected { border-color: var(--green); background: linear-gradient(110deg, #35462a, #2a3525); box-shadow: 0 0 0 1px #8fbd5710; }
+.engine-settings .engine-profile.selected { border-color: var(--green); background: #2f3d27; box-shadow: 0 0 0 1px #8fbd5710; }
 .engine-settings .engine-profile.unavailable { opacity: .48; cursor: not-allowed; }
 .engine-profile input { flex: none; width: 15px; height: 15px; margin: 3px 0 0; accent-color: var(--green); color-scheme: dark; }
 .profile-copy { display: grid; gap: 4px; width: 100%; min-width: 0; }

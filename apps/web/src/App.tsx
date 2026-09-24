@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faChessBoard, faBookOpen, faChessKnight, faSliders, faCircleInfo, type IconDefinition } from '@fortawesome/free-solid-svg-icons'
-import { createGame, importFen, selectNode, type GameDocument } from '@chessin/core/game'
+import { createGame, importFen, type GameDocument } from '@chessin/core/game'
 import type { ReviewMove } from '@chessin/core/review'
 import { AnalysisPage } from './features/analysis/AnalysisPage'
 import { LibraryPage, downloadPgn } from './features/library/LibraryPage'
@@ -21,7 +21,7 @@ export function App() {
   const [saveState, setSaveState] = useState<'saved' | 'saving' | 'unsaved'>('saved')
   const [warning, setWarning] = useState('')
   const [playActive, setPlayActive] = useState(false)
-  const [reviewFirst, setReviewFirst] = useState(false)
+  const [reviewRunning, setReviewRunning] = useState(false)
   const [grades, setGrades] = useState<Record<string, ReviewMove>>({})
   const suspendPlay = useRef<(() => Promise<void>) | null>(null)
   const registerSuspend = useCallback((suspend: () => Promise<void>) => { suspendPlay.current = suspend }, [])
@@ -93,7 +93,6 @@ export function App() {
     await settle()
     currentRef.current = gameToOpen
     setGame(gameToOpen)
-    setReviewFirst(false)
     setGrades({})
     const play = readPlayState(gameToOpen)
     setPage(play && play.status !== 'finished' ? 'play' : 'analysis')
@@ -141,7 +140,6 @@ export function App() {
   function finishAndReview(finished: GameDocument) {
     playChanged(finished)
     setPlayActive(false)
-    setReviewFirst(true)
     setGrades({})
     setPage('analysis')
   }
@@ -157,7 +155,7 @@ export function App() {
     <main className="main-content">
       <div className="topbar"><span className="mobile-brand"><FontAwesomeIcon icon={faChessKnight} aria-hidden="true" /> chessin<span>.</span></span><span className="topbar-path">WORKSPACE <span>/</span> {page.toUpperCase()}</span><div className="topbar-right">{page !== 'play' && <span className={`save-indicator ${saveState}`} role="status"><span className="status-dot" />{saveState === 'saving' ? 'Saving…' : saveState === 'unsaved' ? 'Unsaved' : 'Saved locally'}</span>}<span className="provider-badge">{engine.provider === 'remote' ? '↗ Remote' : '◉ Local'} · {engine.descriptor?.name || engine.status}</span></div></div>
       {warning && <div className="storage-warning" role="alert"><div><strong>{saveState === 'unsaved' ? 'Storage needs attention' : 'Library notice'}</strong><span>{warning}</span></div><div className="warning-actions">{game && <button onClick={() => void exportCurrent()}>Export current PGN</button>}<button onClick={() => setWarning('')} aria-label="Dismiss notice">×</button></div></div>}
-      {page === 'analysis' && (game ? <AnalysisPage key={game.id} game={game} onChange={saveChanges} onOpenSettings={() => void navigate('settings')} initialPane={reviewFirst ? 'review' : 'moves'} grades={grades} reviewPanel={<ReviewPanel game={game} onSelect={id => saveChanges(selectNode(game, id))} onGrades={setGrades} />} /> : <div className="welcome-analysis"><span className="eyebrow">ANALYSIS BOARD</span><h1>Ready when you are.</h1><p>Open a game or start from the initial position.</p><div className="hero-actions"><button className="primary-button" onClick={() => add(createGame())}>New analysis</button><button onClick={() => void navigate('library')}>Browse library</button></div></div>)}
+      {page === 'analysis' && (game ? <AnalysisPage key={game.id} game={game} onChange={saveChanges} onOpenSettings={() => void navigate('settings')} reviewRunning={reviewRunning} grades={grades} reviewPanel={<ReviewPanel game={game} onRunningChange={setReviewRunning} onGrades={setGrades} />} /> : <div className="welcome-analysis"><span className="eyebrow">ANALYSIS BOARD</span><h1>Ready when you are.</h1><p>Open a game or start from the initial position.</p><div className="hero-actions"><button className="primary-button" onClick={() => add(createGame())}>New analysis</button><button onClick={() => void navigate('library')}>Browse library</button></div></div>)}
       {page === 'play' && <PlayPage game={game?.play ? game : undefined} onChange={playChanged} onReview={finishAndReview} onActiveChange={setPlayActive} onSuspendReady={registerSuspend} />}
       {page === 'library' && <LibraryPage games={games} onOpen={open} onImport={importGames} onFen={fen => add(importFen(fen))} onNew={() => add(createGame())} onDelete={remove} onRename={rename} onExport={exportLibrary} onError={setWarning} />}
       {page === 'settings' && <section className="settings-page"><header className="settings-page-heading"><div><span className="eyebrow">YOUR WORKSPACE</span><h1>Settings</h1><p>Your engine. Your preferences. Always in your control.</p></div><span className="settings-local-note">Local first. No account required.</span></header><EngineSettingsPanel /></section>}

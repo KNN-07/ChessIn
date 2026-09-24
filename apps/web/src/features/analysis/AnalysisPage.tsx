@@ -1,6 +1,6 @@
-import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faBackwardFast, faBackwardStep, faForwardStep, faForwardFast, faRotate, faListUl, faMicrochip, faChartLine, faPlay, faStop, faPause, faLightbulb, faShareNodes, faGear, faEllipsis, faArrowUp, faTrashCan, faChessPawn, faCopy } from '@fortawesome/free-solid-svg-icons'
+import { faBackwardFast, faBackwardStep, faForwardStep, faForwardFast, faRotate, faMicrochip, faChartLine, faPlay, faStop, faPause, faLightbulb, faShareNodes, faGear, faEllipsis, faArrowUp, faTrashCan, faChessPawn, faCopy } from '@fortawesome/free-solid-svg-icons'
 import { appendMove, deleteVariation, exportFen, getPosition, promoteVariation, reconstruct, selectNode, type GameDocument, type GameNode, type PositionSpec } from '@chessin/core/game'
 import type { EngineEvent, EngineScore } from '@chessin/core/engine'
 import { Chess } from 'chess.js'
@@ -8,15 +8,10 @@ import { AnalysisBoard } from '../../components/AnalysisBoard'
 import { ChessPlayerRow } from '../../components/ChessPlayerRow'
 import { useEngine } from '../../engine/EngineContext'
 import { mainlineNodes, reviewSummary, type ReviewMove } from '@chessin/core/review'
+import { detectOpening, moveCommentary } from '@chessin/core/opening'
 import { MoveQualityBadge } from '../../components/MoveQualityBadge'
 import { QuickEngineSettings } from '../../engine/QuickEngineSettings'
 import './analysis.css'
-
-const analysisTabs = [
-  { id: 'moves', label: 'Moves', icon: faListUl },
-  { id: 'engine', label: 'Engine', icon: faMicrochip },
-  { id: 'review', label: 'Review', icon: faChartLine },
-] as const
 
 export interface AnalysisPageProps {
   game: GameDocument
@@ -24,7 +19,7 @@ export interface AnalysisPageProps {
   onOpenSettings: () => void
   reviewPanel?: ReactNode
   grades?: Record<string, ReviewMove>
-  initialPane?: 'moves' | 'engine' | 'review'
+  reviewRunning?: boolean
 }
 
 const pieces: Record<string, number> = { p: 1, n: 3, b: 3, r: 5, q: 9 }
@@ -65,13 +60,11 @@ function captured(chess: Chess, rootFen: string): { white: string; black: string
   return { white, black, advantage: value('b') - value('w') }
 }
 
-export function AnalysisPage({ game, onChange, onOpenSettings, reviewPanel, grades, initialPane = 'moves' }: AnalysisPageProps) {
+export function AnalysisPage({ game, onChange, onOpenSettings, reviewPanel, grades, reviewRunning = false }: AnalysisPageProps) {
   const chess = useMemo(() => reconstruct(game), [game])
   const position = useMemo(() => getPosition(game), [game])
   const engine = useEngine()
-  const panelId = useId()
   const [orientation, setOrientation] = useState<'white' | 'black'>('white')
-  const [pane, setPane] = useState<'moves' | 'engine' | 'review'>(initialPane)
   const [moveText, setMoveText] = useState('')
   const [message, setMessage] = useState('')
   const [running, setRunning] = useState(false)
@@ -85,6 +78,8 @@ export function AnalysisPage({ game, onChange, onOpenSettings, reviewPanel, grad
   const moveList = useRef<HTMLDivElement>(null)
   const current = game.nodes[game.currentId]
   const assessment = grades?.[game.currentId]
+  const opening = useMemo(() => detectOpening(game), [game])
+  const commentary = useMemo(() => moveCommentary(game), [game])
   const mainline = useMemo(() => mainlineNodes(game), [game])
   const quality = useMemo(() => reviewSummary({ moves: grades ?? {} }, game), [grades, game])
   const reviewedCount = mainline.filter(id => grades?.[id]).length
@@ -107,7 +102,7 @@ export function AnalysisPage({ game, onChange, onOpenSettings, reviewPanel, grad
     })
     observer.observe(list)
     return () => observer.disconnect()
-  }, [game.currentId, game.rootId, game.nodes, pane])
+  }, [game.currentId, game.rootId, game.nodes])
   const topName = orientation === 'white' ? game.headers.Black || 'Black pieces' : game.headers.White || 'White pieces'
   const bottomName = orientation === 'white' ? game.headers.White || 'White pieces' : game.headers.Black || 'Black pieces'
   const topCaptures = orientation === 'white' ? material.black : material.white
@@ -176,7 +171,7 @@ export function AnalysisPage({ game, onChange, onOpenSettings, reviewPanel, grad
 
   useEffect(() => {
     engine.controller.newGame(game.id)
-    if (!enabled) return
+    if (!enabled || reviewRunning) return
     active.current = true
     setLines({})
     const token = ++searchToken.current
@@ -207,7 +202,7 @@ export function AnalysisPage({ game, onChange, onOpenSettings, reviewPanel, grad
       } finally { if (latest[1] && token === searchToken.current) setLines(latest) }
     }, 150)
     return () => { clearTimeout(timer); clearTimeout(flush); abort.abort(); void engine.controller.cancel('analysis') }
-  }, [enabled, game.id, game.currentId, engine.controller, engine.descriptor, engine.settings, engine.limit, engine.provider])
+  }, [enabled, reviewRunning, game.id, game.currentId, engine.controller, engine.descriptor, engine.settings, engine.limit, engine.provider])
   useEffect(() => { setLines({}) }, [game.id, game.currentId])
 
   useEffect(() => {
@@ -221,10 +216,7 @@ export function AnalysisPage({ game, onChange, onOpenSettings, reviewPanel, grad
   function stop() { active.current = false; searchToken.current++; setRunning(false); setEnabled(false); setEngineMessage('Analysis stopped'); void engine.controller.cancel('analysis') }
   function start() { active.current = true; setEnabled(true) }
   function move(uci: string) { update(() => appendMove(game, uci)) }
-  function choosePane(next: typeof pane) {
-    if (next === 'review' && enabled) stop()
-    setPane(next)
-  }
+  useEffect(() => { if (reviewRunning) stop() }, [reviewRunning])
 
   function moveCell(node?: GameNode): ReactNode {
     if (!node) return <span className="notation-empty" aria-hidden="true">—</span>
@@ -291,35 +283,33 @@ export function AnalysisPage({ game, onChange, onOpenSettings, reviewPanel, grad
     </div>
     <aside className="analysis-pane chess-panel">
       <header className="pane-heading chess-panel-heading"><div className="analysis-heading-copy"><span className="eyebrow">ANALYSIS ROOM</span><h1 title={game.title}>{game.title}</h1><span className="engine-identity"><FontAwesomeIcon icon={faMicrochip} /> {engine.provider === 'remote' ? 'Remote' : 'Local'} · {engine.descriptor?.name || 'Engine not initialized'}</span></div><button onClick={() => setOrientation(orientation === 'white' ? 'black' : 'white')} aria-label="Flip board" title="Flip board"><FontAwesomeIcon icon={faRotate} /></button><button onClick={onOpenSettings} aria-label="Engine settings" title="Engine settings"><FontAwesomeIcon icon={faGear} /></button></header>
+      <QuickEngineSettings disabled={reviewRunning} onOpenSettings={onOpenSettings} />
+      <div className="opening-banner" aria-label="Detected opening"><span className="eyebrow">OPENING{opening ? ` · ${opening.eco}` : ''}</span><strong>{opening?.name ?? (current.parentId ? 'Unrecognized opening' : 'Starting position')}</strong></div>
       <div className="coach-section">
         <article className="coach-card" aria-label="Selected move feedback">
           <header>{assessment ? <MoveQualityBadge label={assessment.label} decorative /> : <span className="move-quality-mark quality-unreviewed" aria-hidden="true"><FontAwesomeIcon icon={faChessPawn} /></span>}<strong>{assessment?.label ?? (current.san ? 'Your move' : 'Welcome')}</strong><span className="coach-score">{displayText}</span></header>
-          <p>{assessment?.explanation ?? (current.san ? 'Review this game to discover your best moves and learn from the critical moments.' : 'Make a move or import a game to start exploring. Your move-by-move feedback will appear here.')}</p>
-          {showHint && <p className="coach-hint">{assessment?.bestSan?.length ? `Best continuation: ${assessment.bestSan.join(' ')}` : 'Open the Engine tab and analyze this position to find the best continuation.'}</p>}
+          <p>{commentary || 'Make a move or import a game to see opening recognition and move-by-move feedback.'}</p>
+          {assessment && <p className="coach-assessment">{assessment.explanation}</p>}
+          {current.comments.length > 0 && <div className="coach-annotation"><span className="eyebrow">GAME COMMENT</span><p>{current.comments.join(' · ')}</p></div>}
+          {showHint && <p className="coach-hint">{assessment?.bestSan?.length ? `Best continuation: ${assessment.bestSan.join(' ')}` : 'Analyze this game or open Live engine analysis below to find the best continuation.'}</p>}
           <small>{moveCaption}{assessment?.actualDepth ? ` · depth ${assessment.actualDepth}` : ''}</small>
         </article>
       </div>
-      <div className="coach-actions"><button onClick={() => setShowHint(!showHint)} aria-label="Show hint" aria-pressed={showHint}><FontAwesomeIcon icon={faLightbulb} /> Hint</button><button onClick={() => choosePane('review')}><FontAwesomeIcon icon={faChartLine} /> Review game</button></div>
-      <div className={`analysis-score-strip ${running ? 'is-searching' : ''}`}><div><span className="score-perspective">{usingReviewScore ? 'WHITE MOVE SCORE' : 'WHITE EVALUATION'}</span><strong>{displayText}</strong></div><div className="score-search-info"><span>{chess.isGameOver() ? statusOf(chess) : leader ? `Depth ${leader.depth} · ${leader.nodes?.toLocaleString() ?? '—'} nodes` : assessment?.actualDepth ? `Move review · depth ${assessment.actualDepth}` : 'Position not analyzed'}</span><button onClick={running || enabled ? stop : start} disabled={pane === 'review' || chess.isGameOver()} aria-label={running || enabled ? 'Stop analysis' : 'Analyze position'}><FontAwesomeIcon icon={running || enabled ? faStop : faPlay} />{running || enabled ? 'Stop' : 'Analyze'}</button></div></div>
-      <div className="pane-tabs chess-tabs" role="tablist" aria-label="Analysis panels">{analysisTabs.map((tab, index) => <button key={tab.id} id={`${panelId}-${tab.id}-tab`} role="tab" aria-controls={`${panelId}-${tab.id}-panel`} aria-selected={pane === tab.id} tabIndex={pane === tab.id ? 0 : -1} className={pane === tab.id ? 'active' : ''} onClick={() => choosePane(tab.id)} onKeyDown={event => {
-        const offset = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0
-        const next = event.key === 'Home' ? 0 : event.key === 'End' ? analysisTabs.length - 1 : offset ? (index + offset + analysisTabs.length) % analysisTabs.length : -1
-        if (next < 0) return
-        event.preventDefault(); choosePane(analysisTabs[next].id); document.getElementById(`${panelId}-${analysisTabs[next].id}-tab`)?.focus()
-      }}><FontAwesomeIcon icon={tab.icon} />{tab.label}</button>)}</div>
-      {pane === 'moves' && <div className="pane-content analysis-moves-panel" role="tabpanel" id={`${panelId}-moves-panel`} aria-labelledby={`${panelId}-moves-tab`}>
+      <div className="coach-actions"><button onClick={() => setShowHint(!showHint)} aria-label="Show hint" aria-pressed={showHint}><FontAwesomeIcon icon={faLightbulb} /> Hint</button></div>
+      <div className="analysis-review-control">{reviewPanel}</div>
+      <div className="pane-content analysis-moves-panel" aria-label="Game moves">
         <div className="move-list-caption"><strong>Move summary</strong><span>{mainline.length} plies · {reviewedCount ? `${reviewedCount} reviewed` : 'Not reviewed'}</span></div>
         <div className="notation-heading" aria-hidden="true"><span>#</span><span>White</span><span>Black</span></div>
         <div className="move-scroll" ref={moveList}><button className={`root-move ${game.currentId === game.rootId ? 'selected' : ''}`} onClick={() => go(game.rootId)}>Starting position</button>{game.nodes[game.rootId].childIds[0] ? renderLine(game.nodes[game.rootId].childIds[0]) : <div className="analysis-empty-moves"><FontAwesomeIcon icon={faChessPawn} /><strong>Your next move starts here.</strong><p>Move a piece or enter notation to start a main line, then explore alternatives.</p></div>}</div>
-      </div>}
-      {pane === 'engine' && <div className="pane-content engine-panel" role="tabpanel" id={`${panelId}-engine-panel`} aria-labelledby={`${panelId}-engine-tab`}>
+      </div>
+      <details className="analysis-live-engine"><summary>Live engine analysis</summary>
+        <div className={`analysis-score-strip ${running ? 'is-searching' : ''}`}><div><span className="score-perspective">WHITE EVALUATION</span><strong>{displayText}</strong></div><div className="score-search-info"><span>{leader ? `Depth ${leader.depth}` : 'Selected position'}</span><button onClick={running || enabled ? stop : start} disabled={reviewRunning || chess.isGameOver()} aria-label={running || enabled ? 'Stop analysis' : 'Analyze position'}><FontAwesomeIcon icon={running || enabled ? faStop : faPlay} />{running || enabled ? 'Stop' : 'Analyze position'}</button></div></div>
         <div className="move-list-caption"><strong>Top continuations</strong><span>{Object.keys(lines).length ? `${Object.keys(lines).length} lines` : 'Full strength'}</span></div>
         <p className="analysis-engine-status" role="status">{engineMessage}</p>
         {Object.values(lines).sort((a, b) => a.multiPv - b.multiPv).map(info => <div className="pv-line" key={info.multiPv}><span className="pv-rank">{info.multiPv}</span><div className="pv-score"><strong>{scoreLabel(whiteScore(info.score, chess.turn()))}</strong><small>depth {info.depth}</small></div><span>{pvSan(position, info.pv) || 'No legal continuation yet'}</span></div>)}
-        {!Object.keys(lines).length && <div className="analysis-empty-moves"><FontAwesomeIcon icon={faMicrochip} /><strong>Find the strongest continuation.</strong><p>Start analysis above for real engine lines, evaluation and best-move arrows.</p></div>}
+        {reviewRunning && <p className="quality-disclaimer">Live analysis is paused while the game is being reviewed.</p>}
         <p className="quality-disclaimer">Scores use White’s perspective. Mate distances and score bounds are preserved.</p>
-      </div>}
-      {pane === 'review' && <div className="pane-content" role="tabpanel" id={`${panelId}-review-panel`} aria-labelledby={`${panelId}-review-tab`}>{reviewPanel || <div className="empty-pane"><strong>Game review</strong><p>Review a game to understand each decision.</p></div>}</div>}
+      </details>
       {message && <p className="analysis-message" role="status">{message}</p>}
       <div className="review-timeline" aria-label="Game evaluation timeline">
         {graph.some(Boolean) ? <svg viewBox="0 0 400 110" role="group" aria-label="Evaluation graph">
@@ -344,7 +334,6 @@ export function AnalysisPage({ game, onChange, onOpenSettings, reviewPanel, grad
         <form className="move-entry" onSubmit={event => { event.preventDefault(); if (moveText.trim() && update(() => appendMove(game, moveText.trim()))) setMoveText('') }}><label htmlFor="move-input">Enter SAN or coordinate move</label><div><input id="move-input" value={moveText} onChange={event => setMoveText(event.target.value)} placeholder="Nf3 or g1f3" autoComplete="off" /><button type="submit" aria-label="Play move"><FontAwesomeIcon icon={faPlay} /></button></div></form>
         <details className="analysis-position-details"><summary>Position FEN</summary><div className="position-copy"><button aria-label="Copy FEN" onClick={async () => { try { await navigator.clipboard.writeText(exportFen(game)); setMessage('Position FEN copied') } catch { setMessage('Clipboard unavailable; select and copy the FEN field') } }}><FontAwesomeIcon icon={faCopy} /></button><input readOnly value={exportFen(game)} aria-label="Selected position FEN" onFocus={event => event.target.select()} /></div></details>
         <div className="analysis-quality-strip" aria-label="ChessIn quality summary">{(['white', 'black'] as const).map(side => <div key={side}><span><i className={`side-dot ${side}`} />{game.headers[side === 'white' ? 'White' : 'Black'] || (side === 'white' ? 'White' : 'Black')}</span><strong>{quality[side].quality ?? '—'}<small> quality</small></strong></div>)}</div>
-        <QuickEngineSettings disabled={pane === 'review'} onOpenSettings={onOpenSettings} />
       </details>
     </aside>
   </section>

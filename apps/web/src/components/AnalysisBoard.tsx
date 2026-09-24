@@ -28,7 +28,7 @@ export function AnalysisBoard({ game, onMove, orientation = 'white', disabled = 
   }
   if (chess.isCheck()) {
     const king = chess.findPiece({ type: 'k', color: chess.turn() })[0]
-    if (king) styles[king] = { background: 'radial-gradient(ellipse, #e95658b8 5%, #e9565822 70%)' }
+    if (king) styles[king] = { backgroundColor: '#e9565880' }
   }
   if (selected) {
     styles[selected] = { backgroundColor: '#e9e88699' }
