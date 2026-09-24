@@ -1,10 +1,11 @@
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faBackwardFast, faBackwardStep, faForwardStep, faForwardFast, faRotate, faListUl, faMicrochip, faChartLine, faPlay, faStop, faPause, faLightbulb, faShareNodes, faGear, faChessKnight, faEllipsis, faArrowUp, faTrashCan, faChessPawn, faCopy } from '@fortawesome/free-solid-svg-icons'
+import { faBackwardFast, faBackwardStep, faForwardStep, faForwardFast, faRotate, faListUl, faMicrochip, faChartLine, faPlay, faStop, faPause, faLightbulb, faShareNodes, faGear, faEllipsis, faArrowUp, faTrashCan, faChessPawn, faCopy } from '@fortawesome/free-solid-svg-icons'
 import { appendMove, deleteVariation, exportFen, getPosition, promoteVariation, reconstruct, selectNode, type GameDocument, type GameNode, type PositionSpec } from '@chessin/core/game'
 import type { EngineEvent, EngineScore } from '@chessin/core/engine'
 import { Chess } from 'chess.js'
 import { AnalysisBoard } from '../../components/AnalysisBoard'
+import { ChessPlayerRow } from '../../components/ChessPlayerRow'
 import { useEngine } from '../../engine/EngineContext'
 import { mainlineNodes, reviewSummary, type ReviewMove } from '@chessin/core/review'
 import { moveSymbols } from '../../components/move-quality'
@@ -148,9 +149,6 @@ export function AnalysisPage({ game, onChange, onOpenSettings, reviewPanel, grad
     if (clock && !clocks[side]) clocks[side] = clock.replace(/^0:/, '')
     clockNode = game.nodes[clockNode.parentId]
   }
-  function playerClock(side: 'w' | 'b') {
-    return <span className={`player-clock ${side === 'w' ? 'clock-white' : ''} ${chess.turn() === side ? 'clock-active' : ''}`} aria-label={`${side === 'w' ? 'White' : 'Black'} clock`}>{clocks[side] ?? (chess.turn() === side ? 'To move' : '—')}</span>
-  }
   const destination = current.uci?.slice(2, 4)
   const badgeFile = destination ? destination.charCodeAt(0) - 97 : 0
   const badgeRank = destination ? Number(destination[1]) - 1 : 0
@@ -278,9 +276,9 @@ export function AnalysisPage({ game, onChange, onOpenSettings, reviewPanel, grad
     return rows
   }
 
-  return <section className="analysis-layout" aria-label="Analysis workspace">
+  return <section className="analysis-layout chess-layout" aria-label="Analysis workspace">
     <div className="board-column">
-      <div className="player-strip"><span className={`player-avatar piece-${orientation === 'white' ? 'black' : 'white'}`}><FontAwesomeIcon icon={faChessPawn} /></span><div><strong>{topName} <span className="player-rating">{game.headers[orientation === 'white' ? 'BlackElo' : 'WhiteElo'] && `(${game.headers[orientation === 'white' ? 'BlackElo' : 'WhiteElo']})`}</span></strong><span className="material">{topCaptures}{topAdvantage > 0 ? ` +${topAdvantage}` : ''}</span></div>{playerClock(orientation === 'white' ? 'b' : 'w')}</div>
+      <ChessPlayerRow name={topName} side={orientation === 'white' ? 'black' : 'white'} rating={game.headers[orientation === 'white' ? 'BlackElo' : 'WhiteElo']} detail={<span className="material">{topCaptures}{topAdvantage > 0 ? ` +${topAdvantage}` : ''}</span>} clock={clocks[orientation === 'white' ? 'b' : 'w']} active={chess.turn() === (orientation === 'white' ? 'b' : 'w')} />
       <div className="board-and-eval">
         <div className={`evaluation-bar ${orientation === 'black' ? 'flipped' : ''}`} role="meter" aria-label={`${usingReviewScore ? 'Reviewed move score' : 'Position evaluation'} from White's perspective`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={evalPercentage} aria-valuetext={displayText}>
           <div className="eval-light" style={{ height: `${evalPercentage}%` }} /><span>{displayText}</span>
@@ -289,12 +287,11 @@ export function AnalysisPage({ game, onChange, onOpenSettings, reviewPanel, grad
           {assessment && destination && <span className={`board-quality-badge move-quality-mark quality-${assessment.label.toLowerCase()}`} title={assessment.label} style={{ left: `${((orientation === 'white' ? badgeFile : 7 - badgeFile) + .88) * 12.5}%`, top: `${((orientation === 'white' ? 7 - badgeRank : badgeRank) + .05) * 12.5}%` }}>{moveSymbols[assessment.label]}</span>}
         </div>
       </div>
-      <div className="player-strip"><span className={`player-avatar piece-${orientation === 'white' ? 'white' : 'black'}`}><FontAwesomeIcon icon={faChessPawn} /></span><div><strong>{bottomName} <span className="player-rating">{game.headers[orientation === 'white' ? 'WhiteElo' : 'BlackElo'] && `(${game.headers[orientation === 'white' ? 'WhiteElo' : 'BlackElo']})`}</span></strong><span className="material">{bottomCaptures}{bottomAdvantage > 0 ? ` +${bottomAdvantage}` : ''}</span></div>{playerClock(orientation === 'white' ? 'w' : 'b')}</div>
+      <ChessPlayerRow name={bottomName} side={orientation} rating={game.headers[orientation === 'white' ? 'WhiteElo' : 'BlackElo']} detail={<span className="material">{bottomCaptures}{bottomAdvantage > 0 ? ` +${bottomAdvantage}` : ''}</span>} clock={clocks[orientation === 'white' ? 'w' : 'b']} active={chess.turn() === (orientation === 'white' ? 'w' : 'b')} />
     </div>
-    <aside className="analysis-pane">
-      <header className="pane-heading"><span className="review-emblem"><FontAwesomeIcon icon={faChartLine} /></span><h1 title={game.title}>Game Review</h1><button onClick={() => setOrientation(orientation === 'white' ? 'black' : 'white')} aria-label="Flip board" title="Flip board"><FontAwesomeIcon icon={faRotate} /></button><button onClick={onOpenSettings} aria-label="Engine settings" title="Engine settings"><FontAwesomeIcon icon={faGear} /></button></header>
+    <aside className="analysis-pane chess-panel">
+      <header className="pane-heading chess-panel-heading"><div className="analysis-heading-copy"><span className="eyebrow">ANALYSIS ROOM</span><h1 title={game.title}>{game.title}</h1><span className="engine-identity"><FontAwesomeIcon icon={faMicrochip} /> {engine.provider === 'remote' ? 'Remote' : 'Local'} · {engine.descriptor?.name || 'Engine not initialized'}</span></div><button onClick={() => setOrientation(orientation === 'white' ? 'black' : 'white')} aria-label="Flip board" title="Flip board"><FontAwesomeIcon icon={faRotate} /></button><button onClick={onOpenSettings} aria-label="Engine settings" title="Engine settings"><FontAwesomeIcon icon={faGear} /></button></header>
       <div className="coach-section">
-        <span className="coach-avatar" aria-hidden="true"><FontAwesomeIcon icon={faChessKnight} /></span>
         <article className="coach-card" aria-label="Selected move feedback">
           <header><span className={`move-quality-mark quality-${assessment?.label.toLowerCase() ?? 'unreviewed'}`}>{assessment ? moveSymbols[assessment.label] : <FontAwesomeIcon icon={faChessPawn} />}</span><strong>{assessment?.label ?? (current.san ? 'Your move' : 'Welcome')}</strong><span className="coach-score">{displayText}</span></header>
           <p>{assessment?.explanation ?? (current.san ? 'Review this game to discover your best moves and learn from the critical moments.' : 'Make a move or import a game to start exploring. Your move-by-move feedback will appear here.')}</p>
@@ -302,15 +299,17 @@ export function AnalysisPage({ game, onChange, onOpenSettings, reviewPanel, grad
           <small>{moveCaption}{assessment?.actualDepth ? ` · depth ${assessment.actualDepth}` : ''}</small>
         </article>
       </div>
-      <div className="coach-actions"><button onClick={() => setShowHint(!showHint)} aria-label="Show hint" aria-pressed={showHint} title="Show hint"><FontAwesomeIcon icon={faLightbulb} /></button><button className="primary-button" onClick={() => choosePane('review')}><FontAwesomeIcon icon={faChartLine} /> Review</button><button disabled={!current.childIds.length} onClick={() => current.childIds[0] && go(current.childIds[0])} aria-label="Next reviewed move"><FontAwesomeIcon icon={faForwardStep} /></button></div>
+      <div className="coach-actions"><button onClick={() => setShowHint(!showHint)} aria-label="Show hint" aria-pressed={showHint}><FontAwesomeIcon icon={faLightbulb} /> Hint</button><button onClick={() => choosePane('review')}><FontAwesomeIcon icon={faChartLine} /> Review game</button></div>
       <div className={`analysis-score-strip ${running ? 'is-searching' : ''}`}><div><span className="score-perspective">{usingReviewScore ? 'WHITE MOVE SCORE' : 'WHITE EVALUATION'}</span><strong>{displayText}</strong></div><div className="score-search-info"><span>{chess.isGameOver() ? statusOf(chess) : leader ? `Depth ${leader.depth} · ${leader.nodes?.toLocaleString() ?? '—'} nodes` : assessment?.actualDepth ? `Move review · depth ${assessment.actualDepth}` : 'Position not analyzed'}</span><button onClick={running || enabled ? stop : start} disabled={pane === 'review' || chess.isGameOver()} aria-label={running || enabled ? 'Stop analysis' : 'Analyze position'}><FontAwesomeIcon icon={running || enabled ? faStop : faPlay} />{running || enabled ? 'Stop' : 'Analyze'}</button></div></div>
-      <div className="pane-tabs" role="tablist" aria-label="Analysis panels">{analysisTabs.map((tab, index) => <button key={tab.id} id={`${panelId}-${tab.id}-tab`} role="tab" aria-controls={`${panelId}-${tab.id}-panel`} aria-selected={pane === tab.id} tabIndex={pane === tab.id ? 0 : -1} className={pane === tab.id ? 'active' : ''} onClick={() => choosePane(tab.id)} onKeyDown={event => {
+      <div className="pane-tabs chess-tabs" role="tablist" aria-label="Analysis panels">{analysisTabs.map((tab, index) => <button key={tab.id} id={`${panelId}-${tab.id}-tab`} role="tab" aria-controls={`${panelId}-${tab.id}-panel`} aria-selected={pane === tab.id} tabIndex={pane === tab.id ? 0 : -1} className={pane === tab.id ? 'active' : ''} onClick={() => choosePane(tab.id)} onKeyDown={event => {
         const offset = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0
         const next = event.key === 'Home' ? 0 : event.key === 'End' ? analysisTabs.length - 1 : offset ? (index + offset + analysisTabs.length) % analysisTabs.length : -1
         if (next < 0) return
         event.preventDefault(); choosePane(analysisTabs[next].id); document.getElementById(`${panelId}-${analysisTabs[next].id}-tab`)?.focus()
       }}><FontAwesomeIcon icon={tab.icon} />{tab.label}</button>)}</div>
       {pane === 'moves' && <div className="pane-content analysis-moves-panel" role="tabpanel" id={`${panelId}-moves-panel`} aria-labelledby={`${panelId}-moves-tab`}>
+        <div className="move-list-caption"><strong>Move summary</strong><span>{mainline.length} plies · {reviewedCount ? `${reviewedCount} reviewed` : 'Not reviewed'}</span></div>
+        <div className="notation-heading" aria-hidden="true"><span>#</span><span>White</span><span>Black</span></div>
         <div className="move-scroll" ref={moveList}><button className={`root-move ${game.currentId === game.rootId ? 'selected' : ''}`} onClick={() => go(game.rootId)}>Starting position</button>{game.nodes[game.rootId].childIds[0] ? renderLine(game.nodes[game.rootId].childIds[0]) : <div className="analysis-empty-moves"><FontAwesomeIcon icon={faChessPawn} /><strong>Your next move starts here.</strong><p>Move a piece or enter notation to start a main line, then explore alternatives.</p></div>}</div>
       </div>}
       {pane === 'engine' && <div className="pane-content engine-panel" role="tabpanel" id={`${panelId}-engine-panel`} aria-labelledby={`${panelId}-engine-tab`}>
@@ -324,8 +323,8 @@ export function AnalysisPage({ game, onChange, onOpenSettings, reviewPanel, grad
       {message && <p className="analysis-message" role="status">{message}</p>}
       <div className="review-timeline" aria-label="Game evaluation timeline">
         {graph.some(Boolean) ? <svg viewBox="0 0 400 110" role="group" aria-label="Evaluation graph">
-          <rect width="400" height="110" fill="#403f3a" /><line x1="0" y1="55" x2="400" y2="55" stroke="#aaa" />
-          {graphSegments.filter(segment => segment.length).map(segment => <path key={segment[0].id} d={`M${segment[0].x},110 ${segment.map(point => `L${point.x},${point.y}`).join(' ')} L${segment.at(-1)!.x},110 Z`} fill="#fff" />)}
+          <rect width="400" height="110" fill="var(--surface)" /><line x1="0" y1="55" x2="400" y2="55" stroke="var(--muted)" />
+          {graphSegments.filter(segment => segment.length).map(segment => <path key={segment[0].id} d={`M${segment[0].x},110 ${segment.map(point => `L${point.x},${point.y}`).join(' ')} L${segment.at(-1)!.x},110 Z`} fill="#cbd8bc" />)}
           {graph.filter((point): point is NonNullable<typeof point> => !!point).map(point => <g key={point.id} role="button" tabIndex={0} aria-label={`Select ${game.nodes[point.id].san}, ${scoreLabel(point.grade.whiteScore)}`} onClick={() => { setPlaying(false); go(point.id) }} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setPlaying(false); go(point.id) } }}>
             {point.id === game.currentId && <line x1={point.x} x2={point.x} y1="0" y2="110" className={`graph-cursor quality-${point.grade.label.toLowerCase()}`} />}
             <circle cx={point.x} cy={point.y} r="5" className={`graph-point quality-${point.grade.label.toLowerCase()}`} /><circle cx={point.x} cy={point.y} r="9" fill="transparent" />
@@ -345,8 +344,7 @@ export function AnalysisPage({ game, onChange, onOpenSettings, reviewPanel, grad
         <form className="move-entry" onSubmit={event => { event.preventDefault(); if (moveText.trim() && update(() => appendMove(game, moveText.trim()))) setMoveText('') }}><label htmlFor="move-input">Enter SAN or coordinate move</label><div><input id="move-input" value={moveText} onChange={event => setMoveText(event.target.value)} placeholder="Nf3 or g1f3" autoComplete="off" /><button type="submit" aria-label="Play move"><FontAwesomeIcon icon={faPlay} /></button></div></form>
         <details className="analysis-position-details"><summary>Position FEN</summary><div className="position-copy"><button aria-label="Copy FEN" onClick={async () => { try { await navigator.clipboard.writeText(exportFen(game)); setMessage('Position FEN copied') } catch { setMessage('Clipboard unavailable; select and copy the FEN field') } }}><FontAwesomeIcon icon={faCopy} /></button><input readOnly value={exportFen(game)} aria-label="Selected position FEN" onFocus={event => event.target.select()} /></div></details>
         <div className="analysis-quality-strip" aria-label="ChessIn quality summary">{(['white', 'black'] as const).map(side => <div key={side}><span><i className={`side-dot ${side}`} />{game.headers[side === 'white' ? 'White' : 'Black'] || (side === 'white' ? 'White' : 'Black')}</span><strong>{quality[side].quality ?? '—'}<small> quality</small></strong></div>)}</div>
-        <div className="move-list-caption"><strong>Move summary</strong><span>{mainline.length} plies · {reviewedCount ? `${reviewedCount} reviewed` : 'Not reviewed'}</span></div>
-    <QuickEngineSettings disabled={pane === 'review'} onOpenSettings={onOpenSettings} />
+        <QuickEngineSettings disabled={pane === 'review'} onOpenSettings={onOpenSettings} />
       </details>
     </aside>
   </section>

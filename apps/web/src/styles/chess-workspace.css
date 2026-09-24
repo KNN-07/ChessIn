@@ -1,0 +1,49 @@
+.analysis-layout.chess-layout, .play-layout.chess-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 760px) minmax(350px, 440px);
+  max-width: 1300px;
+  gap: 28px;
+  align-items: start;
+  justify-content: center;
+  margin: auto;
+  padding: 22px 26px 36px;
+}
+.chess-layout > * { min-width: 0; }
+.chess-layout .board-frame { width: 100%; border: 0; box-shadow: 0 12px 36px #0003; }
+.chess-player-row { display: flex; align-items: center; gap: 11px; min-height: 60px; padding: 8px 0; }
+.chess-player-avatar { display: grid; place-items: center; width: 38px; height: 38px; border: 1px solid var(--line); border-radius: 9px; background: #32362e; color: #f1f2e9; font-size: 23px; flex-shrink: 0; }
+.chess-player-avatar.black { background: #858f7a; color: #20231e; }
+.chess-player-copy { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; min-width: 0; }
+.chess-player-copy strong { width: 100%; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chess-player-rating { font-weight: 400; color: var(--muted); }
+.chess-player-detail { min-height: 15px; color: var(--muted); font-size: 11px; line-height: 1.3; }
+.chess-clock { margin-left: auto; min-width: 78px; text-align: right; padding: 7px 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 7px; color: var(--muted); font-size: 18px; font-weight: 650; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chess-clock.white { background: #d9dfd1; color: #30372b; }
+.chess-clock.is-active { border-color: #8fbd5770; color: var(--green); }
+.chess-clock.white.is-active { background: #e9ece4; color: #30372b; }
+.chess-layout .chess-panel { display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; min-width: 0; min-height: 0; overflow: hidden; box-shadow: 0 12px 36px #0002; }
+.chess-layout .chess-panel-heading { padding: 19px 20px 17px; background: linear-gradient(125deg, #2b392b, #242722 70%); }
+.chess-panel-heading .eyebrow, .chess-panel-heading .play-eyebrow { font-size: 9px; letter-spacing: .17em; color: var(--green); font-weight: 750; }
+.chess-layout .chess-panel-heading h1, .chess-layout .chess-panel-heading h2 { font-size: 20px; line-height: 1.3; letter-spacing: -.035em; margin: 7px 0 9px; overflow-wrap: anywhere; }
+.chess-layout .chess-panel-heading p, .chess-layout .engine-identity { color: var(--muted); font-size: 10px; line-height: 1.5; margin-bottom: 0; }
+.chess-layout .chess-tabs { display: flex; align-items: stretch; padding: 0 18px; border: 0; gap: 5px; }
+.chess-layout .chess-tabs button { display: flex; flex: 1; align-items: center; justify-content: center; gap: 7px; min-height: 40px; padding: 11px 4px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; color: var(--muted); font-size: 12px; font-weight: 650; }
+.chess-layout .chess-tabs button[aria-selected="true"] { color: var(--green); border-color: var(--green); }
+.chess-layout button:focus-visible, .chess-layout summary:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; }
+@media (max-width: 1099px) {
+  .analysis-layout.chess-layout, .play-layout.chess-layout { gap: 20px; padding: 18px; grid-template-columns: minmax(0, 1fr) minmax(320px, .8fr); }
+  .chess-clock { min-width: 68px; font-size: 16px; padding: 7px; }
+}
+@media (max-width: 849px) {
+  .analysis-layout.chess-layout, .play-layout.chess-layout { grid-template-columns: minmax(0, 1fr); max-width: 650px; gap: 20px; }
+  .chess-layout .chess-panel { width: 100%; }
+}
+@media (max-width: 420px) {
+  .analysis-layout.chess-layout, .play-layout.chess-layout { padding: 8px 10px 25px; }
+  .chess-player-row { min-height: 54px; gap: 8px; }
+  .chess-player-copy strong { font-size: 12px; }
+  .chess-player-avatar { width: 32px; height: 32px; font-size: 20px; }
+  .chess-clock { min-width: 60px; font-size: 14px; }
+  .chess-layout .chess-panel-heading { padding: 16px; }
+  .chess-layout .chess-panel-heading h1, .chess-layout .chess-panel-heading h2 { font-size: 18px; }
+}

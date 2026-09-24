@@ -5,6 +5,7 @@ import { createGame, getPosition, reconstruct, type GameDocument } from '@chessi
 import { exportPgn } from '@chessin/core/pgn'
 import type { EngineDescriptor, EngineSettings, SearchLimit } from '@chessin/core/engine'
 import { AnalysisBoard } from '../../components/AnalysisBoard'
+import { ChessPlayerRow } from '../../components/ChessPlayerRow'
 import { useEngine } from '../../engine/EngineContext'
 import { EngineSettingsPanel } from '../../engine/EngineSettingsPanel'
 import { flushSaves, loadGame, saveGame } from '../../storage/db'
@@ -315,22 +316,17 @@ export function PlayPage({ game, onChange, onReview, onActiveChange, onSuspendRe
   const previewTop = color === 'black' ? 'white' : 'black'
   const previewBottom = color === 'black' ? 'black' : 'white'
   const topSide: Side = state?.humanColor === 'b' ? 'w' : 'b'
-  return <main className="play-page">
-    <header className="play-header"><div className="play-heading-icon" aria-hidden="true"><FontAwesomeIcon icon={faChessKnight} /></div>
-      <div><span className="play-eyebrow">CHESSIN · PLAY</span><h1>Play the engine</h1>
-        <p>Casual chess against your chosen engine. No analysis or hints while the game is active.</p></div>
-    </header>
-    {!view || !state ? <div className="play-layout play-setup-layout">
-      <section className="play-preview" aria-label="Starting position preview">
-        <div className="play-preview-heading"><div><span className="play-eyebrow">YOUR NEXT GAME</span><h2>Ready when you are.</h2></div><span className="play-preview-tag"><FontAwesomeIcon icon={faChessBoard} /> Starting position</span></div>
-        <div className="play-preview-player"><span className={`play-player-piece ${previewTop === 'white' ? 'light' : 'dark'}`} aria-hidden="true">{previewTop === 'white' ? '♔' : '♚'}</span><strong>{previewTop === 'white' ? 'White' : 'Black'}</strong><span className="play-preview-side">{color === 'random' ? 'To be decided' : 'Engine'}</span></div>
+  return <section className="play-page" aria-label="Play workspace">
+    {!view || !state ? <div className="play-layout chess-layout">
+      <section className="play-board-column" aria-label="Starting position preview">
+        <ChessPlayerRow name={color === 'random' ? 'Opponent' : 'Engine'} side={previewTop} detail={color === 'random' ? 'Side decided at start' : engine.descriptor?.name ?? 'Choose an engine'} clock={preset === 'untimed' ? 'Untimed' : `${preset === 'custom' ? minutes : presets[preset][0]}:00`} />
         <div className="play-preview-board"><AnalysisBoard game={preview} orientation={color === 'black' ? 'black' : 'white'} onMove={() => undefined} disabled /></div>
-        <div className="play-preview-player"><span className={`play-player-piece ${previewBottom === 'white' ? 'light' : 'dark'}`} aria-hidden="true">{previewBottom === 'white' ? '♔' : '♚'}</span><strong>{previewBottom === 'white' ? 'White' : 'Black'}</strong><span className="play-preview-side">{color === 'random' ? 'To be decided' : 'You'}</span></div>
+        <ChessPlayerRow name="You" side={previewBottom} detail={color === 'random' ? 'Side decided at start' : `Play as ${previewBottom}`} clock={preset === 'untimed' ? 'Untimed' : `${preset === 'custom' ? minutes : presets[preset][0]}:00`} />
         <p className="play-preview-note">The board is a preview. Pieces can be moved after the engine is ready and the game starts.</p>
       </section>
-      <section className="play-setup play-panel" aria-label="New game settings">
-        <div className="play-panel-head"><span className="play-eyebrow">SET UP YOUR MATCH</span><h2>New game</h2><p>Choose your side and time control, then start when you’re ready.</p></div>
-        <div className="play-tabs" role="tablist" aria-label="New game sections">
+      <section className="play-setup play-panel chess-panel" aria-label="New game settings">
+        <div className="play-panel-head chess-panel-heading"><span className="play-eyebrow">PLAY ROOM</span><h2>Play the engine</h2><p>Choose your side and time control. No analysis or hints during play.</p></div>
+        <div className="play-tabs chess-tabs" role="tablist" aria-label="New game sections">
           {setupTabs.map((tab, index) => <button key={tab.id} id={`${tabId}-${tab.id}-tab`} type="button" role="tab" aria-selected={setupTab === tab.id} aria-controls={`${tabId}-${tab.id}-panel`} tabIndex={setupTab === tab.id ? 0 : -1} onClick={() => setSetupTab(tab.id)} onKeyDown={event => handleTabKey(event, setupTabs, index, setSetupTab)}><FontAwesomeIcon icon={tab.icon} aria-hidden="true" />{tab.label}</button>)}
         </div>
         <div className="play-tab-content" id={`${tabId}-new-panel`} role="tabpanel" aria-labelledby={`${tabId}-new-tab`} hidden={setupTab !== 'new'} tabIndex={0}>
@@ -366,26 +362,27 @@ export function PlayPage({ game, onChange, onReview, onActiveChange, onSuspendRe
           <button type="button" className="play-primary" onClick={() => void start()} disabled={busy}><FontAwesomeIcon icon={faPlay} aria-hidden="true" />{busy ? 'Initializing engine…' : 'Start game'}<FontAwesomeIcon icon={faArrowRight} aria-hidden="true" /></button>
         </div>
       </section>
-    </div> : <div className="play-layout">
-      <section className="play-board" aria-label="Game board"><div className="play-player"><span className="play-player-name"><span className={`play-player-piece ${topSide === 'w' ? 'light' : 'dark'}`} aria-hidden="true">{topSide === 'w' ? '♔' : '♚'}</span><strong>{state.engineName}</strong><small>{topSide === 'w' ? 'White' : 'Black'}</small></span><time aria-label={`${topSide === 'w' ? 'White' : 'Black'} clock`}>{clockLabel(topSide)}</time></div>
+    </div> : <div className="play-layout chess-layout">
+      <section className="play-board-column" aria-label="Game board"><ChessPlayerRow name={state.engineName} side={topSide === 'w' ? 'white' : 'black'} detail={topSide === 'w' ? 'White · Engine' : 'Black · Engine'} clock={clockLabel(topSide)} active={active && state.turn === topSide} />
         <AnalysisBoard game={view} orientation={state.humanColor === 'w' ? 'white' : 'black'} onMove={humanMove} disabled={!active || sessionRef.current?.turn !== state.humanColor} />
-        <div className="play-player"><span className="play-player-name"><span className={`play-player-piece ${state.humanColor === 'w' ? 'light' : 'dark'}`} aria-hidden="true">{state.humanColor === 'w' ? '♔' : '♚'}</span><strong>You</strong><small>{state.humanColor === 'w' ? 'White' : 'Black'}</small></span><time aria-label={`${state.humanColor === 'w' ? 'White' : 'Black'} clock`}>{clockLabel(state.humanColor)}</time></div>
-        {active && <form className="play-input" onSubmit={event => { event.preventDefault(); if (moveText.trim()) { humanMove(moveText.trim()); setMoveText('') } }}>
-          <label htmlFor="play-move-input">Your move (SAN or coordinates)</label>
-          <input id="play-move-input" value={moveText} onChange={event => setMoveText(event.target.value)} disabled={sessionRef.current?.turn !== state.humanColor} placeholder="e4 or e2e4" />
-          <button type="submit" disabled={sessionRef.current?.turn !== state.humanColor}>Move</button>
-        </form>}</section>
-      <section className="play-panel play-game-panel" aria-label="Game status">
-        <div className="play-panel-head"><span className="play-eyebrow">{state.provider === 'local' ? 'ON-DEVICE GAME' : 'REMOTE ENGINE GAME'}</span><h2>{statusTitle}</h2><p>{state.engineName} {state.engineVersion} · {state.initialMs === null ? 'Untimed' : `${state.initialMs / 60_000}+${state.incrementMs / 1000}`}</p></div>
+        <ChessPlayerRow name="You" side={state.humanColor === 'w' ? 'white' : 'black'} detail={state.humanColor === 'w' ? 'White' : 'Black'} clock={clockLabel(state.humanColor)} active={active && state.turn === state.humanColor} />
+      </section>
+      <section className="play-panel play-game-panel chess-panel" aria-label="Game status">
+        <div className="play-panel-head chess-panel-heading"><span className="play-eyebrow">PLAY ROOM</span><h2>{statusTitle}</h2><p>{state.provider === 'local' ? 'Local' : 'Remote'} · {state.engineName} {state.engineVersion} · {state.initialMs === null ? 'Untimed' : `${state.initialMs / 60_000}+${state.incrementMs / 1000}`}</p></div>
         <div className={`play-status ${state.status}`} aria-live="polite"><span className="play-status-dot" />
           {state.status === 'finished' ? `${resultLabel ?? state.result ?? 'Game over'} · ${state.reason ?? 'Game finished'}` : state.status === 'interrupted' ? 'Engine interrupted · both clocks stopped' : state.status === 'suspended' ? 'Suspended · both clocks stopped' : `${state.turn === 'w' ? 'White' : 'Black'} to move${board?.isCheck() ? ' · Check' : ''}`}
         </div>
-        <div className="play-tabs" role="tablist" aria-label="Game sections">
+        <div className="play-tabs chess-tabs" role="tablist" aria-label="Game sections">
           {gameTabs.map((tab, index) => <button key={tab.id} id={`${tabId}-${tab.id}-tab`} type="button" role="tab" aria-selected={gameTab === tab.id} aria-controls={`${tabId}-${tab.id}-panel`} tabIndex={gameTab === tab.id ? 0 : -1} onClick={() => setGameTab(tab.id)} onKeyDown={event => handleTabKey(event, gameTabs, index, setGameTab)}><FontAwesomeIcon icon={tab.icon} aria-hidden="true" />{tab.label}</button>)}
         </div>
         <div className="play-tab-content" id={`${tabId}-moves-panel`} role="tabpanel" aria-labelledby={`${tabId}-moves-tab`} hidden={gameTab !== 'moves'} tabIndex={0}>
           <div className="play-move-heading"><strong>Moves</strong><span>{playedNodes.length} {playedNodes.length === 1 ? 'ply' : 'plies'}</span></div>
           {playedNodes.length ? <ol className="play-moves" aria-label="Played moves">{playedNodes.map((node, index) => index % 2 === 0 ? <li key={node.id}><span className="play-move-number">{Math.floor(index / 2) + 1}.</span><span>{node.san}</span><span>{playedNodes[index + 1]?.san ?? '…'}</span></li> : null)}</ol> : <p className="play-empty-moves">The first move will appear here.</p>}
+        {active && <form className="play-input" onSubmit={event => { event.preventDefault(); if (moveText.trim()) { humanMove(moveText.trim()); setMoveText('') } }}>
+          <label htmlFor="play-move-input">Your move (SAN or coordinates)</label>
+          <input id="play-move-input" value={moveText} onChange={event => setMoveText(event.target.value)} disabled={sessionRef.current?.turn !== state.humanColor} placeholder="e4 or e2e4" />
+          <button type="submit" disabled={sessionRef.current?.turn !== state.humanColor}>Move</button>
+        </form>}
         </div>
         <div className="play-tab-content play-details" id={`${tabId}-details-panel`} role="tabpanel" aria-labelledby={`${tabId}-details-tab`} hidden={gameTab !== 'details'} tabIndex={0}>
           <dl><div><dt>White</dt><dd>{view.headers.White ?? (state.humanColor === 'w' ? 'You' : state.engineName)} · {clockLabel('w')}</dd></div><div><dt>Black</dt><dd>{view.headers.Black ?? (state.humanColor === 'b' ? 'You' : state.engineName)} · {clockLabel('b')}</dd></div><div><dt>Time control</dt><dd>{state.initialMs === null ? 'Untimed' : `${state.initialMs / 60_000} min + ${state.incrementMs / 1000} sec`}</dd></div><div><dt>Engine</dt><dd>{state.provider === 'local' ? 'On device' : 'Remote'} · {state.engineName} {state.engineVersion}</dd></div><div><dt>Result</dt><dd>{state.status === 'finished' ? `${state.result ?? '*'} · ${state.reason ?? 'Game finished'}` : 'In progress'}</dd></div></dl>
@@ -405,5 +402,5 @@ export function PlayPage({ game, onChange, onReview, onActiveChange, onSuspendRe
       </section>
     </div>}
     {error && <p className="play-error" role="alert">{error}</p>}
-  </main>
+  </section>
 }
